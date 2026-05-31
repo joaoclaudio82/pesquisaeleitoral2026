@@ -7,7 +7,7 @@ Flask==3.0.3
 
 # ORM / Banco de dados
 Flask-SQLAlchemy==3.1.1
-SQLAlchemy==2.0.30
+SQLAlchemy>=2.0.36
 
 # Utilidades
 python-slugify==8.0.4       # geração de slugs amigáveis
