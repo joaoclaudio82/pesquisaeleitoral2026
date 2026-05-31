@@ -12,15 +12,24 @@ load_dotenv()
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
-def _database_uri() -> str:
+def _database_uri(*, exigir_database_url: bool = False) -> str:
     """
     Monta a URI do PostgreSQL a partir de DATABASE_URL ou variáveis POSTGRES_*.
     Usa driver psycopg v3 (postgresql+psycopg://).
+
+    Em produção (Railway), DATABASE_URL deve apontar para o Postgres do serviço —
+    não use POSTGRES_HOST=localhost do ambiente local.
     """
-    url = os.environ.get('DATABASE_URL')
+    url = os.environ.get('DATABASE_URL', '').strip()
     if url:
         if url.startswith('postgres://'):
             url = url.replace('postgres://', 'postgresql://', 1)
+    elif exigir_database_url:
+        raise RuntimeError(
+            'DATABASE_URL não configurada. No Railway: serviço Web → Variables → '
+            'Add Reference → Postgres → DATABASE_URL. '
+            'Remova POSTGRES_HOST/POSTGRES_PORT locais (localhost/5433).'
+        )
     else:
         user = os.environ.get('POSTGRES_USER', 'eleitoral')
         password = os.environ.get('POSTGRES_PASSWORD', 'eleitoral')
@@ -62,7 +71,7 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     """Ambiente de produção."""
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = _database_uri()
+    SQLALCHEMY_DATABASE_URI = _database_uri(exigir_database_url=True)
 
 
 # Mapeamento de ambientes
