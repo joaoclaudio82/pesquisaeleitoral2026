@@ -169,12 +169,12 @@ NOTICIAS_SEED = [
 ]
 
 
-def seed_database() -> None:
+def seed_database(*, gerar_historico: bool = True, dias_historico: int = 60) -> None:
     """Popula o banco se ainda não houver candidatos cadastrados."""
     if Candidato.query.first():
         return  # Já populado — não re-seed
 
-    print('🌱 Populando banco de dados com dados iniciais...')
+    print('Populando banco de dados com dados iniciais...')
 
     # ── Candidatos ────────────────────────────────────────────────────────
     candidatos_criados = {}
@@ -183,7 +183,10 @@ def seed_database() -> None:
         db.session.add(c)
         db.session.flush()
         candidatos_criados[dados['slug']] = c
-        HistoricoService.gerar_historico(c, dias=60)
+        if gerar_historico:
+            HistoricoService.gerar_historico(c, dias=dias_historico)
+        else:
+            HistoricoService.registrar_dia(c)
 
     db.session.flush()
 
@@ -205,5 +208,5 @@ def seed_database() -> None:
         db.session.add(n)
 
     db.session.commit()
-    print(f'✅ Seed concluído: {len(CANDIDATOS_SEED)} candidatos, '
-          f'{len(NOTICIAS_SEED)} notícias inseridas.')
+    print(f'Seed concluido: {len(CANDIDATOS_SEED)} candidatos, '
+          f'{len(NOTICIAS_SEED)} noticias inseridas.')

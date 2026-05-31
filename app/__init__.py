@@ -48,7 +48,8 @@ def create_app(env: str = None) -> Flask:
         if env == 'production':
             from .seed import seed_database
             from .services import UsuarioService
-            seed_database()
+            # Seed leve no boot — sem 60 dias de histórico (evita timeout no Railway)
+            seed_database(gerar_historico=False)
             UsuarioService.seed_admin_padrao()
 
     # ── Registrar Blueprints (Controllers) ────────────────────────────────
