@@ -5,7 +5,7 @@ Padrão Application Factory + Blueprints (MVC)
 import os
 from flask import Flask
 from .database import db
-from config import config_map, _database_uri
+from config import config_map, resolve_production_database_uri
 
 
 def create_app(env: str = None) -> Flask:
@@ -30,7 +30,10 @@ def create_app(env: str = None) -> Flask:
     env = env or os.environ.get('FLASK_ENV', 'development')
     app.config.from_object(config_map.get(env, config_map['default']))
     if env == 'production':
-        app.config['SQLALCHEMY_DATABASE_URI'] = _database_uri(exigir_database_url=True)
+        uri = resolve_production_database_uri()
+        app.config['SQLALCHEMY_DATABASE_URI'] = uri
+        if 'railway.app' in uri:
+            app.config['_USING_PUBLIC_DB'] = True
 
     # Pasta instance (logs/uploads locais, se necessário)
     os.makedirs(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'instance'), exist_ok=True)

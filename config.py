@@ -57,6 +57,22 @@ def _database_uri(*, exigir_database_url: bool = False, public: bool = False) ->
     )
 
 
+def _use_public_database() -> bool:
+    return os.environ.get('USE_PUBLIC_DATABASE', '').strip().lower() in ('1', 'true', 'yes')
+
+
+def resolve_production_database_uri() -> str:
+    """URI de producao: interna por padrao; publica se USE_PUBLIC_DATABASE=1."""
+    public = _database_uri(public=True)
+    if _use_public_database():
+        if not public:
+            raise RuntimeError(
+                'USE_PUBLIC_DATABASE=1 mas DATABASE_PUBLIC_URL nao configurada.'
+            )
+        return public
+    return _database_uri(exigir_database_url=True)
+
+
 def rebind_database(app, uri: str) -> None:
     """Troca a URI do banco em runtime (fallback Railway public URL)."""
     from app.database import db
@@ -72,7 +88,7 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'pool_recycle': 300,
-        'connect_args': {'connect_timeout': 30},
+        'connect_args': {'connect_timeout': 10},
     }
     JSON_AS_ASCII = False          # suporte a caracteres UTF-8 no JSON
     JSON_SORT_KEYS = False

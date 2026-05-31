@@ -36,6 +36,11 @@ def _try_public_url_fallback(app) -> bool:
         return False
     public_uri = _database_uri(public=True)
     if not public_uri:
+        print(
+            '[bootstrap] DATABASE_PUBLIC_URL ausente. No Railway: servico Web → '
+            'Variables → Add Reference → Postgres → DATABASE_PUBLIC_URL',
+            flush=True,
+        )
         return False
     current = app.config.get('SQLALCHEMY_DATABASE_URI', '')
     if 'railway.app' in current:
@@ -69,10 +74,10 @@ def bootstrap_database(app, env: str) -> None:
 
         _log_db_target(app)
         last_error = None
-        tried_public = False
+        tried_public = app.config.get('_USING_PUBLIC_DB', False)
 
         while True:
-            max_attempts = 8
+            max_attempts = 10 if tried_public else 2
             for attempt in range(1, max_attempts + 1):
                 try:
                     print(f'[bootstrap] tentativa {attempt}/{max_attempts}...', flush=True)
