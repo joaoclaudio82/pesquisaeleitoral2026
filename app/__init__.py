@@ -48,13 +48,13 @@ def create_app(env: str = None) -> Flask:
     _register_blueprints(app)
 
     # ── Banco: dev/test no boot; produção em background (health check imediato) ──
-    from .bootstrap import bootstrap_database, register_lazy_bootstrap, start_bootstrap_background
+    from .bootstrap import bootstrap_database, register_db_gate, start_bootstrap_background
     if env == 'testing':
         with app.app_context():
             db.create_all()
     elif env == 'production':
         start_bootstrap_background(app, env)
-        register_lazy_bootstrap(app, env)
+        register_db_gate(app, env)
     else:
         bootstrap_database(app, env)
 

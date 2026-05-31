@@ -1,7 +1,6 @@
 """
 Bootstrap do banco — create_all, migrate e seed com retry (Railway).
 """
-import os
 import threading
 import time
 
@@ -68,41 +67,42 @@ def bootstrap_database(app, env: str) -> None:
     if app.config.get('_DB_READY'):
         return
 
-    with _bootstrap_lock:
-        if app.config.get('_DB_READY'):
-            return
+    _log_db_target(app)
+    last_error = None
+    tried_public = app.config.get('_USING_PUBLIC_DB', False)
 
-        _log_db_target(app)
-        last_error = None
-        tried_public = app.config.get('_USING_PUBLIC_DB', False)
-
-        while True:
-            max_attempts = 10 if tried_public else 2
-            for attempt in range(1, max_attempts + 1):
-                try:
+    while True:
+        max_attempts = 10 if tried_public else 2
+        for attempt in range(1, max_attempts + 1):
+            try:
+                with _bootstrap_lock:
+                    if app.config.get('_DB_READY'):
+                        return
                     print(f'[bootstrap] tentativa {attempt}/{max_attempts}...', flush=True)
                     _run_bootstrap_once(app, env)
                     app.config['_DB_READY'] = True
+                    app.config.pop('_DB_BOOTSTRAP_ERROR', None)
                     print('[bootstrap] concluido.', flush=True)
                     return
-                except Exception as exc:
-                    if not _is_connection_error(exc):
-                        raise
-                    last_error = exc
-                    print(f'[bootstrap] Postgres indisponivel: {exc}', flush=True)
-                    db.session.remove()
-                    db.engine.dispose()
-                    if attempt < max_attempts:
-                        time.sleep(min(attempt * 2, 10))
+            except Exception as exc:
+                if not _is_connection_error(exc):
+                    raise
+                last_error = exc
+                print(f'[bootstrap] Postgres indisponivel: {exc}', flush=True)
+                db.session.remove()
+                db.engine.dispose()
+            if attempt < max_attempts:
+                time.sleep(min(attempt * 2, 10))
 
-            if env == 'production' and not tried_public and _try_public_url_fallback(app):
-                tried_public = True
-                _log_db_target(app)
-                continue
-            break
+        if env == 'production' and not tried_public and _try_public_url_fallback(app):
+            tried_public = True
+            _log_db_target(app)
+            continue
+        break
 
-        if last_error:
-            raise last_error
+    if last_error:
+        app.config['_DB_BOOTSTRAP_ERROR'] = str(last_error)
+        raise last_error
 
 
 def start_bootstrap_background(app, env: str) -> None:
@@ -121,19 +121,27 @@ def start_bootstrap_background(app, env: str) -> None:
     threading.Thread(target=_worker, daemon=True, name='db-bootstrap').start()
 
 
-_SKIP_BOOTSTRAP_ENDPOINTS = frozenset({'main.health', 'main.favicon'})
+_SKIP_DB_GATE_ENDPOINTS = frozenset({'main.health', 'main.favicon'})
 
 
-def register_lazy_bootstrap(app, env: str) -> None:
-    """Garante bootstrap antes de rotas que usam banco (exceto /health)."""
+def register_db_gate(app, env: str) -> None:
+    """Bloqueia rotas que precisam de banco sem travar o worker (sem bootstrap sync)."""
 
     @app.before_request
-    def _ensure_db_ready():
+    def _db_gate():
         if app.config.get('_DB_READY'):
             return None
-        from flask import request
+        from flask import flash, jsonify, redirect, request, url_for
         endpoint = request.endpoint or ''
-        if endpoint in _SKIP_BOOTSTRAP_ENDPOINTS or endpoint.startswith('static'):
+        if endpoint in _SKIP_DB_GATE_ENDPOINTS or endpoint.startswith('static'):
             return None
-        bootstrap_database(app, env)
-        return None
+        if endpoint == 'auth.login' and request.method == 'GET':
+            return None
+        if app.config.get('_DB_BOOTSTRAP_ERROR'):
+            msg = 'Banco indisponível. Verifique DATABASE_URL no Railway.'
+        else:
+            msg = 'Banco inicializando. Aguarde alguns segundos e tente novamente.'
+        if request.path.startswith('/api/'):
+            return jsonify({'status': 'erro', 'mensagem': msg}), 503
+        flash(msg, 'warning')
+        return redirect(url_for('auth.login'))

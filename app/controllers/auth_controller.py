@@ -15,6 +15,14 @@ def login():
         return redirect(url_for('main.dashboard'))
 
     if request.method == 'POST':
+        from flask import current_app
+        if not current_app.config.get('_DB_READY'):
+            flash(
+                'Banco de dados ainda inicializando. Aguarde alguns segundos e tente novamente.',
+                'warning',
+            )
+            return render_template('auth/login.html')
+
         email = request.form.get('email', '').strip()
         senha = request.form.get('senha', '')
 

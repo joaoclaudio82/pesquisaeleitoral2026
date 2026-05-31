@@ -18,7 +18,12 @@ def _filtros_request():
 def health():
     """Health check para Railway — sem auth e sem consulta ao banco."""
     from flask import current_app
-    db_status = 'ready' if current_app.config.get('_DB_READY') else 'pending'
+    if current_app.config.get('_DB_READY'):
+        db_status = 'ready'
+    elif current_app.config.get('_DB_BOOTSTRAP_ERROR'):
+        db_status = 'error'
+    else:
+        db_status = 'pending'
     return {'status': 'ok', 'db': db_status}, 200
 
 
