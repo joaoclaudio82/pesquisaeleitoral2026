@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Coletar Notícias{% endblock %}
+{% block breadcrumb %}
+<li><a href="{{ url_for('noticias.listar') }}">Notícias</a></li>
+<li><a href="{{ url_for('noticias.admin') }}">Administrar</a></li>
+<li class="active">Coletar</li>
+{% endblock %}
+
+{% block content %}
+<section class="page-section form-section wide">
+    <div class="page-header">
+        <h1><i class="fas fa-cloud-download-alt"></i> Coletar Notícias do Passado</h1>
+        <p>Busca na web via Google News RSS, analisa sentimento/tema e <strong>salva no banco</strong></p>
+    </div>
+
+    <form method="POST" action="{{ url_for('noticias.admin_coletar') }}" class="form-card">
+
+        <div class="form-group">
+            <label for="candidato_id">Candidato</label>
+            <select id="candidato_id" name="candidato_id">
+                <option value="">Todos os candidatos ativos</option>
+                {% for c in candidatos %}
+                <option value="{{ c.id }}">
+                    {{ c.nome }} — {{ c.escopo_label }} ({{ c.partido }})
+                </option>
+                {% endfor %}
+            </select>
+            <span class="form-hint">A busca usa o nome do candidato + "Brasil".</span>
+        </div>
+
+        <div class="form-group">
+            <label for="dias">Período retroativo <span class="required">*</span></label>
+            <select id="dias" name="dias" required>
+                {% for val, rotulo, _ in periodos %}
+                <option value="{{ val }}" {% if val == 30 %}selected{% endif %}>{{ rotulo }}</option>
+                {% endfor %}
+            </select>
+            <span class="form-hint">
+                Notícias encontradas recebem a <strong>data real de publicação</strong>
+                e ficam disponíveis nos filtros do dashboard e do feed.
+            </span>
+        </div>
+
+        <div class="form-group">
+            <label for="termo_extra">Termo adicional (opcional)</label>
+            <input type="text" id="termo_extra" name="termo_extra"
+                   placeholder="Ex: eleições 2026, economia">
+            <span class="form-hint">Refina a busca junto com o nome do candidato.</span>
+        </div>
+
+        <div class="form-info-box">
+            <i class="fas fa-info-circle"></i>
+            <div>
+                <strong>Como funciona</strong>
+                <ul>
+                    <li>Consulta o Google News RSS (sem API key)</li>
+                    <li>Ignora duplicatas já salvas (mesma URL ou título)</li>
+                    <li>Classifica sentimento e tema automaticamente</li>
+                    <li>Armazena em PostgreSQL com <code>publicada_em</code> histórica</li>
+                </ul>
+                <p style="margin-top:8px;font-size:12px;color:var(--text-muted)">
+                    Períodos acima de 30 dias dependem do que o feed retornar;
+                    o app filtra pela data de publicação informada na notícia.
+                </p>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('noticias.admin') }}" class="btn-secondary">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-search"></i> Buscar e Salvar no Banco
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}

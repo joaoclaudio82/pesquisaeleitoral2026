@@ -1,0 +1,28 @@
+{# Filtros por cargo e estado — incluir dentro de forms GET #}
+<div class="filter-group">
+    <label for="filtro-categoria">Cargo</label>
+    <select id="filtro-categoria" name="categoria"
+            {% if auto_submit %}onchange="this.form.submit()"{% endif %}>
+        <option value="">Todos os cargos</option>
+        {% for val, lbl in categorias %}
+        <option value="{{ val }}"
+            {% if filtro_categoria == val %}selected{% endif %}>
+            {{ lbl }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="filter-group">
+    <label for="filtro-uf">Estado</label>
+    <select id="filtro-uf" name="uf"
+            {% if auto_submit %}onchange="this.form.submit()"{% endif %}>
+        <option value="">Todos os estados</option>
+        {% for sigla, nome in estados %}
+        <option value="{{ sigla }}"
+            {% if filtro_uf == sigla %}selected{% endif %}>
+            {{ sigla }} — {{ nome }}
+        </option>
+        {% endfor %}
+    </select>
+</div>

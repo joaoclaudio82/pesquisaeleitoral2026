@@ -1,0 +1,15 @@
+{# Avatar do candidato: foto local ou iniciais #}
+{% macro avatar(c, large=false, extra_class='') %}
+{% set cls = 'candidato-avatar' + (' large' if large else '') + (' has-foto' if c.tem_foto else '') + (' ' + extra_class if extra_class else '') %}
+<div class="{{ cls | trim }}"
+     style="{% if not c.tem_foto %}background:{{ c.cor }}30; color:{{ c.cor }}{% endif %}">
+    {% if c.tem_foto %}
+    <img src="{{ url_for('static', filename=c.foto_url) }}"
+         alt="Foto de {{ c.nome }}"
+         loading="lazy"
+         onerror="this.style.display='none'; this.parentElement.classList.remove('has-foto'); this.parentElement.textContent='{{ c.iniciais }}';">
+    {% else %}
+    {{ c.iniciais }}
+    {% endif %}
+</div>
+{% endmacro %}

@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% from '_candidato_avatar.html' import avatar %}
+{% set editando = candidato is not none %}
+{% block title %}{{ 'Editar' if editando else 'Cadastrar' }} Candidato{% endblock %}
+{% block breadcrumb %}
+<li><a href="{{ url_for('candidatos.listar') }}">Candidatos</a></li>
+{% if editando %}
+<li><a href="{{ url_for('candidatos.detalhe', slug=candidato.slug) }}">{{ candidato.nome_abrev }}</a></li>
+<li class="active">Editar</li>
+{% else %}
+<li class="active">Cadastrar</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="page-section form-section">
+    <div class="page-header">
+        <h1>
+            <i class="fas fa-{{ 'pen' if editando else 'user-plus' }}"></i>
+            {{ 'Editar' if editando else 'Cadastrar' }} Candidato
+        </h1>
+        <p>
+            {% if editando %}
+            Altere nome, partido, cor de identificação, temas e foto.
+            {% else %}
+            Informe o cargo e o estado para monitorar a análise no escopo correto.
+            {% endif %}
+        </p>
+    </div>
+
+    {% if editando %}
+    <div class="candidato-form-preview">
+        {{ avatar(candidato, large=true) }}
+        <div class="candidato-form-preview-actions">
+            <form method="POST" action="{{ url_for('candidatos.buscar_foto', slug=candidato.slug) }}">
+                <button type="submit" class="btn-secondary btn-sm">
+                    <i class="fas fa-camera"></i> Buscar foto na internet
+                </button>
+            </form>
+            {% if candidato.tem_foto %}
+            <form method="POST" action="{{ url_for('candidatos.remover_foto', slug=candidato.slug) }}"
+                  onsubmit="return confirm('Remover a foto deste candidato?')">
+                <button type="submit" class="btn-secondary btn-sm">
+                    <i class="fas fa-image"></i> Remover foto
+                </button>
+            </form>
+            {% endif %}
+            <span class="form-hint">Busca automática na Wikipedia (pt).</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="POST"
+          action="{{ url_for('candidatos.editar', slug=candidato.slug) if editando else url_for('candidatos.criar') }}"
+          class="form-card" novalidate id="formCandidato">
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="categoria">Cargo <span class="required">*</span></label>
+                <select id="categoria" name="categoria" required>
+                    {% for val, rotulo in categorias %}
+                    <option value="{{ val }}"
+                        {% if (editando and candidato.categoria == val) or (not editando and val == 'presidente') %}selected{% endif %}>
+                        {{ rotulo }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <span class="form-hint">Presidente é nacional; demais cargos exigem UF.</span>
+            </div>
+
+            <div class="form-group" id="grupoUf">
+                <label for="uf">Estado (UF) <span class="required" id="ufRequired">*</span></label>
+                <select id="uf" name="uf">
+                    <option value="">Selecione o estado</option>
+                    {% for sigla, nome in estados %}
+                    <option value="{{ sigla }}"
+                        {% if editando and candidato.uf == sigla %}selected{% endif %}>
+                        {{ sigla }} — {{ nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="nome">Nome Completo <span class="required">*</span></label>
+            <input type="text" id="nome" name="nome" required
+                   value="{{ candidato.nome if editando else '' }}"
+                   placeholder="Ex: Maria da Silva"
+                   autocomplete="off">
+            <span class="form-hint">Use o nome como é conhecido publicamente (melhora a busca da foto).</span>
+        </div>
+
+        <div class="form-group">
+            <label for="nome_abrev">Nome Curto <span class="required">*</span></label>
+            <input type="text" id="nome_abrev" name="nome_abrev"
+                   {% if editando %}required{% endif %} maxlength="40"
+                   value="{{ candidato.nome_abrev if editando else '' }}"
+                   placeholder="Ex: Maria"
+                   autocomplete="off">
+            <span class="form-hint">Exibido em gráficos e listagens.</span>
+        </div>
+
+        <div class="form-group">
+            <label for="partido">Partido <span class="required">*</span></label>
+            <input type="text" id="partido" name="partido" required
+                   value="{{ candidato.partido if editando else '' }}"
+                   placeholder="Ex: PT"
+                   autocomplete="off">
+        </div>
+
+        <div class="form-group">
+            <label for="cor">Cor de Identificação</label>
+            <div class="color-picker-wrap">
+                <input type="color" id="cor" name="cor"
+                       value="{{ candidato.cor if editando else '#6366f1' }}">
+                <span class="color-label" id="colorLabel">{{ candidato.cor if editando else '#6366f1' }}</span>
+                <span class="color-preview-swatch" id="colorSwatch"
+                      style="background:{{ candidato.cor if editando else '#6366f1' }}"></span>
+            </div>
+            <span class="form-hint">Usada em gráficos, badges e destaques do candidato.</span>
+        </div>
+
+        <div class="form-group">
+            <label>Temas Principais</label>
+            <div class="temas-check-grid">
+                {% for valor, rotulo in temas_disponiveis %}
+                <label class="tema-check-item">
+                    <input type="checkbox" name="temas" value="{{ valor }}"
+                        {% if editando and valor in candidato.temas %}checked{% endif %}>
+                    <span class="tema-check-label"
+                          style="border-color:{{ temas_cores.get(valor,'#6366f1') }}40;
+                                 color:{{ temas_cores.get(valor,'#6366f1') }}">
+                        {{ rotulo }}
+                    </span>
+                </label>
+                {% endfor %}
+            </div>
+            {% if not editando %}
+            <span class="form-hint">Deixe vazio para seleção automática.</span>
+            {% endif %}
+        </div>
+
+        {% if not editando %}
+        <div class="form-group">
+            <label class="checkbox-inline">
+                <input type="checkbox" name="buscar_foto" value="on" checked>
+                Buscar foto automaticamente na internet (Wikipedia)
+            </label>
+        </div>
+        {% endif %}
+
+        <div class="form-info-box">
+            <i class="fas fa-info-circle"></i>
+            <div>
+                {% if editando %}
+                <strong>Dica:</strong>
+                <ul>
+                    <li>A cor é aplicada imediatamente nos gráficos após salvar</li>
+                    <li>Se a foto não aparecer, use um nome mais completo e clique em “Buscar foto”</li>
+                    <li>Métricas e histórico existentes são preservados</li>
+                </ul>
+                {% else %}
+                <strong>O que acontece após cadastrar?</strong>
+                <ul>
+                    <li>O candidato entra no monitoramento do cargo e estado selecionados</li>
+                    <li>Histórico de 60 dias e notícias iniciais são gerados automaticamente</li>
+                    <li>Foto opcional via Wikipedia (pode buscar depois em Editar)</li>
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('candidatos.detalhe', slug=candidato.slug) if editando else url_for('candidatos.listar') }}"
+               class="btn-secondary">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-{{ 'save' if editando else 'plus' }}"></i>
+                {{ 'Salvar alterações' if editando else 'Cadastrar e Monitorar' }}
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CATEGORIAS_NACIONAIS = new Set(['presidente']);
+const categoriaSelect = document.getElementById('categoria');
+const ufSelect = document.getElementById('uf');
+const grupoUf = document.getElementById('grupoUf');
+const ufRequired = document.getElementById('ufRequired');
+const colorInput = document.getElementById('cor');
+const colorLabel = document.getElementById('colorLabel');
+const colorSwatch = document.getElementById('colorSwatch');
+const nomeInput = document.getElementById('nome');
+const abrevInput = document.getElementById('nome_abrev');
+
+function atualizarCampoUf() {
+    const nacional = CATEGORIAS_NACIONAIS.has(categoriaSelect.value);
+    grupoUf.style.display = nacional ? 'none' : '';
+    ufSelect.required = !nacional;
+    ufRequired.style.visibility = nacional ? 'hidden' : 'visible';
+    if (nacional) ufSelect.value = '';
+}
+
+function syncAbrev() {
+    if (!abrevInput.value && nomeInput.value) {
+        abrevInput.placeholder = nomeInput.value.trim().split(/\s+/)[0] || 'Nome curto';
+    }
+}
+
+categoriaSelect.addEventListener('change', atualizarCampoUf);
+colorInput.addEventListener('input', () => {
+    colorLabel.textContent = colorInput.value;
+    if (colorSwatch) colorSwatch.style.background = colorInput.value;
+});
+nomeInput.addEventListener('input', syncAbrev);
+atualizarCampoUf();
+syncAbrev();
+</script>
+{% endblock %}

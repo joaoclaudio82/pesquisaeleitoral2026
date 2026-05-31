@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Usuários{% endblock %}
+{% block breadcrumb %}<li class="active">Usuários</li>{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="page-header">
+        <h1>Usuários <span class="badge">{{ usuarios | length }}</span></h1>
+        <p>Gerencie contas de administrador e visualizadores</p>
+        <div class="page-actions">
+            <a href="{{ url_for('usuarios.criar') }}" class="btn-primary">
+                <i class="fas fa-user-plus"></i> Novo usuário
+            </a>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>E-mail</th>
+                    <th>Papel</th>
+                    <th>Status</th>
+                    <th>Cadastro</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in usuarios %}
+                <tr>
+                    <td><strong>{{ u.nome }}</strong></td>
+                    <td>{{ u.email }}</td>
+                    <td>
+                        <span class="badge-role {% if u.is_admin %}admin{% else %}viewer{% endif %}">
+                            {{ u.papel_label }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if u.ativo %}
+                        <span class="status-ativo">Ativo</span>
+                        {% else %}
+                        <span class="status-inativo">Inativo</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ u.criado_em | br_datetime }}</td>
+                    <td class="table-actions">
+                        <a href="{{ url_for('usuarios.editar', usuario_id=u.id) }}"
+                           class="btn-secondary btn-sm" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        {% if u.id != current_user.id %}
+                        <form method="POST"
+                              action="{{ url_for('usuarios.excluir', usuario_id=u.id) }}"
+                              class="inline-form"
+                              onsubmit="return confirm('Excluir o usuário {{ u.nome }}?');">
+                            <button type="submit" class="btn-danger btn-sm" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="empty-cell">Nenhum usuário cadastrado.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <p class="form-hint" style="margin-top:16px;">
+        <i class="fas fa-info-circle"></i>
+        <strong>Administrador</strong> — pode cadastrar, coletar e excluir dados.
+        <strong>Visualizador</strong> — apenas consulta dashboards e listagens.
+    </p>
+</section>
+{% endblock %}

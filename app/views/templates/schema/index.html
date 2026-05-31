@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Banco de Dados{% endblock %}
+{% block breadcrumb %}
+<li class="active">Banco de Dados</li>
+{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<section class="page-section schema-page">
+    <div class="page-header">
+        <h1><i class="fas fa-database"></i> Banco de Dados</h1>
+        <p>
+            {{ total_tabelas }} tabela(s) · {{ total_relacionamentos }} relacionamento(s) no modelo atual
+        </p>
+    </div>
+
+    <div class="schema-diagram-card">
+        <h2><i class="fas fa-project-diagram"></i> Diagrama de relacionamentos</h2>
+        <p class="chart-subtitle">Visão entidade-relacionamento (somente leitura)</p>
+        <div class="schema-mermaid-wrap">
+            <div class="mermaid">{{ mermaid }}</div>
+        </div>
+    </div>
+
+    <h2 class="schema-section-title"><i class="fas fa-link"></i> Relacionamentos</h2>
+    <div class="schema-rel-grid">
+        {% for rel in relacionamentos %}
+        <div class="schema-rel-card">
+            <div class="schema-rel-header">
+                <span class="schema-table-tag">{{ rel.origem }}</span>
+                <i class="fas fa-arrow-right"></i>
+                <span class="schema-table-tag">{{ rel.destino }}</span>
+                <span class="schema-card-badge">{{ rel.cardinalidade }}</span>
+            </div>
+            <p>{{ rel.descricao }}</p>
+            {% if rel.fk_colunas %}
+            <p class="schema-fk-hint">
+                <i class="fas fa-key"></i>
+                FK: <code>{{ rel.destino }}.{{ rel.fk_colunas | join(', ') }}</code>
+                → <code>{{ rel.origem }}.id</code>
+            </p>
+            {% elif rel.cardinalidade == 'N:1' %}
+            <p class="schema-fk-hint">
+                <i class="fas fa-key"></i>
+                FK em <code>{{ rel.origem }}</code> referencia <code>{{ rel.destino }}</code>
+            </p>
+            {% endif %}
+            {% if rel.cascade != '—' %}
+            <p class="schema-fk-hint"><i class="fas fa-bolt"></i> Cascade: {{ rel.cascade }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <h2 class="schema-section-title"><i class="fas fa-table"></i> Tabelas e colunas</h2>
+    <div class="schema-tables-grid">
+        {% for t in tabelas %}
+        <article class="schema-table-card" id="tabela-{{ t.nome }}">
+            <header class="schema-table-header">
+                <div>
+                    <h3>{{ t.nome }}</h3>
+                    <span class="schema-model-tag">Model: {{ t.modelo }}</span>
+                </div>
+                <span class="schema-count-badge">
+                    {{ t.total_registros | br_number if t.total_registros is not none else '—' }} registro(s)
+                </span>
+            </header>
+            <p class="schema-table-desc">{{ t.descricao }}</p>
+
+            {% if t.relacionamentos_saida %}
+            <div class="schema-table-rels">
+                <strong>Relacionamentos:</strong>
+                {% for r in t.relacionamentos_saida %}
+                <span class="schema-mini-rel">
+                    {{ r.cardinalidade }} → <code>{{ r.destino }}</code> ({{ r.nome_relacao }})
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="table-card schema-columns-wrap">
+                <table class="data-table schema-columns-table">
+                    <thead>
+                        <tr>
+                            <th>Coluna</th>
+                            <th>Tipo</th>
+                            <th>Null</th>
+                            <th>Chaves</th>
+                            <th>Default</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for col in t.colunas %}
+                        <tr>
+                            <td><code>{{ col.nome }}</code></td>
+                            <td>{{ col.tipo }}</td>
+                            <td>{% if col.nullable %}sim{% else %}<strong>não</strong>{% endif %}</td>
+                            <td>
+                                {% if col.pk %}<span class="schema-key pk">PK</span>{% endif %}
+                                {% if col.unique %}<span class="schema-key uq">UQ</span>{% endif %}
+                                {% if col.index %}<span class="schema-key idx">IDX</span>{% endif %}
+                                {% for fk in col.fks %}
+                                <span class="schema-key fk" title="{{ fk.tabela_ref }}.{{ fk.coluna_ref }}">FK</span>
+                                {% endfor %}
+                            </td>
+                            <td class="schema-default">{{ col.default or '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if t.constraints %}
+            <details class="schema-constraints">
+                <summary>Restrições ({{ t.constraints | length }})</summary>
+                <ul>
+                    {% for c in t.constraints %}
+                    <li>
+                        <code>{{ c.nome }}</code> — {{ c.tipo }}
+                        {% if c.colunas %}({{ c.colunas | join(', ') }}){% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </details>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof mermaid === 'undefined') return;
+    mermaid.initialize({
+        startOnLoad: false,
+        theme: 'dark',
+        securityLevel: 'loose',
+        er: { useMaxWidth: true },
+        themeVariables: {
+            primaryColor: '#1e293b',
+            primaryTextColor: '#f1f5f9',
+            primaryBorderColor: '#6366f1',
+            lineColor: '#64748b',
+            secondaryColor: '#0f172a',
+            tertiaryColor: '#334155',
+        },
+    });
+    const el = document.querySelector('.schema-mermaid-wrap .mermaid');
+    if (el) {
+        try {
+            await mermaid.run({ nodes: [el] });
+        } catch (err) {
+            el.innerHTML = '<p class="schema-mermaid-error">Não foi possível renderizar o diagrama. '
+                + 'Use a lista de relacionamentos abaixo.</p>';
+            console.error('Mermaid ER:', err);
+        }
+    }
+});
+</script>
+{% endblock %}

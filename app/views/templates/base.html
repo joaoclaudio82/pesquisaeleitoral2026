@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_nome }}{% endblock %} — Pesquisa Eleitoral {{ ano_eleicao }}</title>
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+    <!-- ══════════════ SIDEBAR ══════════════ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="{{ url_for('main.dashboard') }}" class="logo">
+                <i class="fas fa-vote-yea"></i>
+                <span>Eleitoral<strong>{{ ano_eleicao }}</strong></span>
+            </a>
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Fechar menu">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav" aria-label="Navegação principal">
+            <a href="{{ url_for('main.dashboard') }}"
+               class="nav-item {% if request.endpoint == 'main.dashboard' %}active{% endif %}">
+                <i class="fas fa-chart-line"></i><span>Dashboard</span>
+            </a>
+            <a href="{{ url_for('candidatos.listar') }}"
+               class="nav-item {% if request.blueprint == 'candidatos' %}active{% endif %}">
+                <i class="fas fa-users"></i><span>Candidatos</span>
+            </a>
+            <a href="{{ url_for('noticias.listar') }}"
+               class="nav-item {% if request.endpoint == 'noticias.listar' %}active{% endif %}">
+                <i class="fas fa-newspaper"></i><span>Notícias</span>
+            </a>
+            {% if pode_escrever %}
+            <a href="{{ url_for('noticias.admin') }}"
+               class="nav-item {% if request.endpoint and request.endpoint.startswith('noticias.admin') %}active{% endif %}">
+                <i class="fas fa-cog"></i><span>Admin Notícias</span>
+            </a>
+            <a href="{{ url_for('noticias.admin_coletar') }}"
+               class="nav-item {% if request.endpoint == 'noticias.admin_coletar' %}active{% endif %}">
+                <i class="fas fa-cloud-download-alt"></i><span>Coletar Notícias</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('tendencias.index') }}"
+               class="nav-item {% if request.blueprint == 'tendencias' %}active{% endif %}">
+                <i class="fas fa-chart-area"></i><span>Tendências</span>
+            </a>
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('usuarios.listar') }}"
+               class="nav-item {% if request.blueprint == 'usuarios' %}active{% endif %}">
+                <i class="fas fa-user-shield"></i><span>Usuários</span>
+            </a>
+            <a href="{{ url_for('schema.index') }}"
+               class="nav-item {% if request.blueprint == 'schema' %}active{% endif %}">
+                <i class="fas fa-database"></i><span>Banco de Dados</span>
+            </a>
+            {% endif %}
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <i class="fas fa-user-circle"></i>
+                <div>
+                    <strong>{{ current_user.nome }}</strong>
+                    <span>{{ current_user.papel_label }}</span>
+                </div>
+            </div>
+            <a href="{{ url_for('auth.logout') }}" class="sidebar-logout">
+                <i class="fas fa-sign-out-alt"></i> Sair
+            </a>
+        </div>
+    </aside>
+
+    <!-- ══════════════ CONTEÚDO PRINCIPAL ══════════════ -->
+    <main class="main-content" id="mainContent">
+
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="menu-btn" id="menuBtn" aria-label="Abrir menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <nav aria-label="Breadcrumb">
+                    <ol class="breadcrumb">
+                        <li><a href="{{ url_for('main.dashboard') }}">Início</a></li>
+                        {% block breadcrumb %}{% endblock %}
+                    </ol>
+                </nav>
+            </div>
+            <div class="topbar-right">
+                {% if pode_escrever %}
+                <a href="{{ url_for('candidatos.criar') }}" class="btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Cadastrar
+                </a>
+                <button class="btn-refresh" id="refreshBtn" title="Simular atualização">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                {% endif %}
+                {% if not pode_escrever %}
+                <span class="viewer-badge" title="Perfil somente leitura">
+                    <i class="fas fa-eye"></i> Somente leitura
+                </span>
+                {% endif %}
+                <span class="live-badge">
+                    <span class="pulse"></span>AO VIVO
+                </span>
+            </div>
+        </header>
+
+        <!-- Flash messages -->
+        {% with msgs = get_flashed_messages(with_categories=true) %}
+            {% if msgs %}
+                <div class="flash-container">
+                    {% for category, msg in msgs %}
+                        <div class="flash flash-{{ category }}">
+                            <i class="fas {% if category == 'success' %}fa-check-circle
+                                         {% elif category == 'error' %}fa-exclamation-circle
+                                         {% elif category == 'warning' %}fa-exclamation-triangle
+                                         {% else %}fa-info-circle{% endif %}"></i>
+                            {{ msg }}
+                            <button class="flash-close" onclick="this.parentElement.remove()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Conteúdo da página -->
+        <div class="page-container">
+            {% block content %}{% endblock %}
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- App JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

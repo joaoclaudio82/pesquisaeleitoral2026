@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% from '_candidato_avatar.html' import avatar %}
+{% block title %}Candidatos{% endblock %}
+{% block breadcrumb %}<li class="active">Candidatos</li>{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="page-header">
+        <h1>Candidatos <span class="badge">{{ candidatos | length }}</span></h1>
+        <p>Cadastre e acompanhe candidatos por cargo e estado</p>
+        <div class="page-actions">
+            <form method="get" class="search-filter" role="search">
+                {% if filtro_categoria %}<input type="hidden" name="categoria" value="{{ filtro_categoria }}">{% endif %}
+                {% if filtro_uf %}<input type="hidden" name="uf" value="{{ filtro_uf }}">{% endif %}
+                <i class="fas fa-search"></i>
+                <input type="text" name="q" value="{{ termo }}"
+                       placeholder="Buscar candidato ou partido..."
+                       aria-label="Buscar candidato">
+                <button type="submit" class="sr-only">Buscar</button>
+            </form>
+            {% if pode_escrever %}
+            <a href="{{ url_for('candidatos.criar') }}" class="btn-primary">
+                <i class="fas fa-plus"></i> Cadastrar Candidato
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="get" class="filters-bar" role="search">
+        {% if termo %}<input type="hidden" name="q" value="{{ termo }}">{% endif %}
+        {% set auto_submit = true %}
+        {% include '_filtros_eleitorais.html' %}
+        <button type="submit" class="btn-secondary btn-sm">
+            <i class="fas fa-filter"></i> Filtrar
+        </button>
+        {% if filtro_categoria or filtro_uf or termo %}
+        <a href="{{ url_for('candidatos.listar') }}" class="btn-secondary btn-sm">
+            <i class="fas fa-times"></i> Limpar
+        </a>
+        {% endif %}
+    </form>
+
+    {% if termo %}
+    <p class="search-result-info">
+        {{ candidatos | length }} resultado(s) para "<strong>{{ termo }}</strong>"
+    </p>
+    {% endif %}
+
+    {% if candidatos %}
+    <div class="candidatos-grid">
+        {% for c in candidatos %}
+        <article class="candidato-card" tabindex="0"
+                 onclick="location.href='{{ url_for('candidatos.detalhe', slug=c.slug) }}'">
+            <div class="candidato-header">
+                {{ avatar(c) }}
+                <div class="candidato-info">
+                    <h2 class="candidato-nome">{{ c.nome }}</h2>
+                    <p class="candidato-partido">{{ c.partido }}</p>
+                    <p class="candidato-escopo">
+                        <span class="escopo-badge">{{ c.categoria_label }}</span>
+                        {% if c.uf %}
+                        <span class="escopo-badge uf">{{ c.uf }}</span>
+                        {% else %}
+                        <span class="escopo-badge nacional">Nacional</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="candidato-trend" title="{{ c.tendencia_label }}">
+                    {% if c.tendencia == 'up' %}
+                        <i class="fas fa-arrow-trend-up" style="color:#10b981"></i>
+                    {% elif c.tendencia == 'down' %}
+                        <i class="fas fa-arrow-trend-down" style="color:#ef4444"></i>
+                    {% else %}
+                        <i class="fas fa-minus" style="color:#f59e0b"></i>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="candidato-metrics">
+                <div class="metric-box">
+                    <div class="metric-label">Aprovação</div>
+                    <div class="metric-value aprovacao">{{ c.aprovacao | pct(0) }}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Rejeição</div>
+                    <div class="metric-value rejeicao">{{ c.rejeicao | pct(0) }}</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-label">Neutros</div>
+                    <div class="metric-value neutro">{{ c.neutro | pct(0) }}</div>
+                </div>
+            </div>
+
+            <div class="candidato-bar">
+                <div class="bar-segment bar-aprovacao"
+                     style="flex:{{ c.aprovacao | round(0) }}"></div>
+                <div class="bar-segment bar-neutro"
+                     style="flex:{{ c.neutro | round(0) }}"></div>
+                <div class="bar-segment bar-rejeicao"
+                     style="flex:{{ c.rejeicao | round(0) }}"></div>
+            </div>
+
+            <div class="candidato-tags">
+                {% for tema in c.temas %}
+                <span class="tema-tag"
+                      style="border-color:{{ temas_cores.get(tema,'#6366f1') }}40;
+                             color:{{ temas_cores.get(tema,'#6366f1') }}">
+                    {{ temas_labels.get(tema, tema) }}
+                </span>
+                {% endfor %}
+            </div>
+
+            {% if pode_escrever %}
+            <div class="candidato-card-actions" onclick="event.stopPropagation()">
+                <a href="{{ url_for('candidatos.editar', slug=c.slug) }}" class="btn-secondary btn-sm">
+                    <i class="fas fa-pen"></i> Editar
+                </a>
+            </div>
+            {% endif %}
+
+            <div class="candidato-mencoes">
+                <i class="fas fa-newspaper"></i>
+                <span>{{ c.total_noticias }} notícias rastreadas</span>
+                <span style="margin-left:auto">
+                    <span style="color:#10b981">▲{{ c.noticias_positivas }}</span>
+                    <span style="color:#ef4444; margin-left:6px">▼{{ c.noticias_negativas }}</span>
+                </span>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-users"></i>
+        <h3>Nenhum candidato encontrado</h3>
+        <p>
+            {% if termo or filtro_categoria or filtro_uf %}
+            Ajuste os filtros ou cadastre um novo candidato.
+            {% else %}
+            Cadastre o primeiro candidato para iniciar o monitoramento.
+            {% endif %}
+        </p>
+        {% if pode_escrever %}
+        <a href="{{ url_for('candidatos.criar') }}" class="btn-primary">
+            <i class="fas fa-plus"></i> Cadastrar Candidato
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

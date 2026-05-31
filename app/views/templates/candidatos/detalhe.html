@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% from '_candidato_avatar.html' import avatar %}
+{% block title %}{{ candidato.nome_abrev }}{% endblock %}
+{% block breadcrumb %}
+<li><a href="{{ url_for('candidatos.listar') }}">Candidatos</a></li>
+<li class="active">{{ candidato.nome_abrev }}</li>
+{% endblock %}
+
+{% block content %}
+<section class="page-section">
+
+    <!-- Cabeçalho do candidato -->
+    <div class="candidato-detalhe-header">
+        {{ avatar(candidato, large=true) }}
+        <div class="candidato-detalhe-info">
+            <h1>{{ candidato.nome }}</h1>
+            <p class="candidato-detalhe-meta">
+                <span class="partido-badge" style="background:{{ candidato.cor }}22; color:{{ candidato.cor }}">
+                    {{ candidato.partido }}
+                </span>
+                <span class="escopo-badge">{{ candidato.categoria_label }}</span>
+                {% if candidato.uf %}
+                <span class="escopo-badge uf">{{ candidato.uf }}</span>
+                {% else %}
+                <span class="escopo-badge nacional">Nacional</span>
+                {% endif %}
+                <span class="tendencia-badge {{ candidato.tendencia }}">
+                    {{ candidato.tendencia | tendencia_icon }} {{ candidato.tendencia_label }}
+                </span>
+            </p>
+        </div>
+        <div class="candidato-detalhe-actions">
+            <a href="{{ url_for('noticias.listar') }}?candidato_id={{ candidato.id }}"
+               class="btn-secondary">
+                <i class="fas fa-newspaper"></i> Ver Notícias
+            </a>
+            {% if pode_escrever %}
+            <a href="{{ url_for('candidatos.editar', slug=candidato.slug) }}" class="btn-primary">
+                <i class="fas fa-pen"></i> Editar
+            </a>
+            <form method="POST"
+                  action="{{ url_for('candidatos.desativar', candidato_id=candidato.id) }}"
+                  onsubmit="return confirm('Remover {{ candidato.nome_abrev }} do monitoramento?')">
+                <button type="submit" class="btn-danger">
+                    <i class="fas fa-trash"></i> Remover
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon positive"><i class="fas fa-thumbs-up"></i></div>
+            <div class="kpi-info">
+                <span class="kpi-label">Aprovação</span>
+                <span class="kpi-value" style="color:{{ candidato.cor }}">
+                    {{ candidato.aprovacao | pct }}
+                </span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon negative"><i class="fas fa-thumbs-down"></i></div>
+            <div class="kpi-info">
+                <span class="kpi-label">Rejeição</span>
+                <span class="kpi-value">{{ candidato.rejeicao | pct }}</span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon neutral"><i class="fas fa-minus"></i></div>
+            <div class="kpi-info">
+                <span class="kpi-label">Neutros</span>
+                <span class="kpi-value">{{ candidato.neutro | pct }}</span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon info"><i class="fas fa-newspaper"></i></div>
+            <div class="kpi-info">
+                <span class="kpi-label">Total de Menções</span>
+                <span class="kpi-value">{{ candidato.mencoes | br_number }}</span>
+                <span class="kpi-change positive">
+                    ▲{{ sentimentos.positivo }} pos · ▼{{ sentimentos.negativo }} neg
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico histórico -->
+    <div class="chart-card full" style="margin-bottom:24px">
+        <div class="chart-header">
+            <h3>Evolução de Aprovação e Rejeição — 60 dias</h3>
+        </div>
+        <div style="height:300px">
+            <canvas id="chartHistorico"></canvas>
+        </div>
+    </div>
+
+    <!-- Temas -->
+    <div class="candidato-tags" style="margin-bottom:24px">
+        {% for tema in candidato.temas %}
+        <a href="{{ url_for('noticias.listar') }}?tema={{ tema }}&candidato_id={{ candidato.id }}"
+           class="tema-tag"
+           style="border-color:{{ temas_cores.get(tema,'#6366f1') }}40;
+                  color:{{ temas_cores.get(tema,'#6366f1') }}">
+            {{ temas_labels.get(tema, tema) }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Notícias recentes -->
+    <div class="table-card">
+        <div class="chart-header">
+            <h3><i class="fas fa-newspaper"></i> Notícias Recentes</h3>
+            <a href="{{ url_for('noticias.listar') }}?candidato_id={{ candidato.id }}"
+               class="btn-secondary btn-sm">Ver todas</a>
+        </div>
+        {% if noticias %}
+        <div class="noticias-grid">
+            {% for n in noticias[:6] %}
+            <article class="noticia-card">
+                <div class="noticia-card-header">
+                    <span class="sentimento-badge {{ n.sentimento }}">
+                        <i class="fas {% if n.sentimento == 'positivo' %}fa-smile
+                                      {% elif n.sentimento == 'negativo' %}fa-frown
+                                      {% else %}fa-meh{% endif %}"></i>
+                        {{ n.sentimento | capitalize }}
+                    </span>
+                    <span class="tema-badge">{{ temas_labels.get(n.tema, n.tema) }}</span>
+                </div>
+                <p class="noticia-titulo">{{ n.titulo }}</p>
+                <p class="noticia-resumo">{{ n.resumo[:120] }}...</p>
+                <div class="noticia-card-footer">
+                    <span class="noticia-fonte">
+                        <i class="fas fa-newspaper"></i> {{ n.fonte }}
+                    </span>
+                    <span class="noticia-data">{{ n.publicada_em | tempo_relativo }}</span>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:var(--text-muted); text-align:center; padding:32px">
+            Nenhuma notícia rastreada ainda.
+        </p>
+        {% endif %}
+    </div>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const LABELS = {{ historico_labels | tojson }};
+const APROV  = {{ historico_aprov  | tojson }};
+const REJEIT = {{ historico_rejeit | tojson }};
+const COR    = '{{ candidato.cor }}';
+
+Chart.defaults.color       = '#94a3b8';
+Chart.defaults.borderColor = '#1e293b';
+
+new Chart(document.getElementById('chartHistorico'), {
+    type: 'line',
+    data: {
+        labels: LABELS,
+        datasets: [
+            {
+                label: 'Aprovação',
+                data: APROV,
+                borderColor: COR,
+                backgroundColor: COR + '20',
+                borderWidth: 2.5,
+                tension: 0.4,
+                pointRadius: 0,
+                fill: true,
+            },
+            {
+                label: 'Rejeição',
+                data: REJEIT,
+                borderColor: '#ef4444',
+                backgroundColor: '#ef444420',
+                borderWidth: 2,
+                tension: 0.4,
+                pointRadius: 0,
+                fill: true,
+            }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: { labels: { color: '#94a3b8', usePointStyle: true } },
+            tooltip: {
+                backgroundColor: '#1a2332', titleColor: '#f1f5f9',
+                bodyColor: '#94a3b8', borderColor: '#334155',
+                borderWidth: 1, padding: 12, cornerRadius: 8,
+                callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y?.toFixed(1)}%` }
+            }
+        },
+        scales: {
+            x: { grid:{color:'#1e293b'}, ticks:{color:'#64748b', maxTicksLimit:10} },
+            y: { grid:{color:'#1e293b'}, ticks:{color:'#64748b', callback: v => v+'%'} }
+        }
+    }
+});
+</script>
+{% endblock %}

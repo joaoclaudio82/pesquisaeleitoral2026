@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Administrar Notícias{% endblock %}
+{% block breadcrumb %}
+<li><a href="{{ url_for('noticias.listar') }}">Notícias</a></li>
+<li class="active">Administrar</li>
+{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="page-header">
+        <h1><i class="fas fa-cog"></i> Administrar Notícias
+            <span class="badge">{{ total_noticias }}</span>
+        </h1>
+        <p>Gerencie as notícias coletadas: adicione manualmente ou remova registros</p>
+        <div class="page-actions">
+            <a href="{{ url_for('noticias.listar') }}" class="btn-secondary">
+                <i class="fas fa-eye"></i> Ver Feed
+            </a>
+            <a href="{{ url_for('noticias.admin_coletar') }}" class="btn-primary">
+                <i class="fas fa-cloud-download-alt"></i> Coletar do Passado
+            </a>
+            <a href="{{ url_for('noticias.admin_criar') }}" class="btn-secondary">
+                <i class="fas fa-plus"></i> Nova Manual
+            </a>
+        </div>
+    </div>
+
+    <form method="get" class="filters-bar" role="search">
+        <div class="filter-group">
+            <label for="filtro-sentimento">Sentimento</label>
+            <select id="filtro-sentimento" name="sentimento">
+                <option value="">Todos</option>
+                {% for val, lbl in [('positivo','Positivo'),('negativo','Negativo'),('neutro','Neutro')] %}
+                <option value="{{ val }}" {% if filtro_sentimento == val %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filtro-tema">Tema</label>
+            <select id="filtro-tema" name="tema">
+                <option value="">Todos</option>
+                {% for val, lbl in temas_opcoes %}
+                <option value="{{ val }}" {% if filtro_tema == val %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filtro-candidato">Candidato</label>
+            <select id="filtro-candidato" name="candidato_id">
+                <option value="">Todos</option>
+                {% for c in candidatos %}
+                <option value="{{ c.id }}" {% if filtro_candidato_id == c.id %}selected{% endif %}>
+                    {{ c.nome_abrev }} — {{ c.escopo_label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% set auto_submit = false %}
+        {% include '_filtros_eleitorais.html' %}
+        {% include '_filtro_periodo.html' %}
+        <div class="filter-group">
+            <label for="filtro-busca">Busca</label>
+            <input type="text" id="filtro-busca" name="q" value="{{ filtro_busca }}"
+                   placeholder="Título ou resumo..." class="filter-search">
+        </div>
+        <button type="submit" class="btn-secondary btn-sm"><i class="fas fa-filter"></i> Filtrar</button>
+    </form>
+
+    {% if paginacao.items %}
+    <div class="admin-table-wrap">
+        <table class="data-table admin-table">
+            <thead>
+                <tr>
+                    <th>Título</th>
+                    <th>Candidato</th>
+                    <th>Sentimento</th>
+                    <th>Tema</th>
+                    <th>Fonte</th>
+                    <th>Relev.</th>
+                    <th>Publicada</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for n in paginacao.items %}
+                <tr>
+                    <td>
+                        <strong class="admin-titulo">{{ n.titulo }}</strong>
+                        {% if n.resumo %}
+                        <div class="admin-resumo">{{ n.resumo[:120] }}{% if n.resumo|length > 120 %}…{% endif %}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if n.candidato %}
+                        <span style="color:{{ n.candidato.cor }}">{{ n.candidato.nome_abrev }}</span>
+                        <div class="admin-meta">{{ n.candidato.escopo_label }}</div>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td><span class="sentimento-badge {{ n.sentimento }}">{{ n.sentimento_label }}</span></td>
+                    <td>{{ temas_labels.get(n.tema, n.tema) }}</td>
+                    <td>{{ n.fonte }}</td>
+                    <td>{{ n.relevancia }}%</td>
+                    <td>{{ n.publicada_em | br_datetime }}</td>
+                    <td class="admin-actions">
+                        <form method="POST"
+                              action="{{ url_for('noticias.admin_excluir', noticia_id=n.id, **request.args) }}"
+                              onsubmit="return confirm('Excluir esta notícia?')">
+                            <button type="submit" class="btn-danger btn-sm" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if paginacao.pages > 1 %}
+    <nav class="paginacao">
+        {% if paginacao.has_prev %}
+        <a href="?pagina={{ paginacao.prev_num }}&sentimento={{ filtro_sentimento }}&tema={{ filtro_tema }}&candidato_id={{ filtro_candidato_id or '' }}&q={{ filtro_busca }}&categoria={{ filtro_categoria or '' }}&uf={{ filtro_uf or '' }}&periodo={{ filtro_periodo }}"
+           class="pag-btn"><i class="fas fa-chevron-left"></i></a>
+        {% endif %}
+        <span class="pag-info">Página {{ paginacao.page }} de {{ paginacao.pages }}</span>
+        {% if paginacao.has_next %}
+        <a href="?pagina={{ paginacao.next_num }}&sentimento={{ filtro_sentimento }}&tema={{ filtro_tema }}&candidato_id={{ filtro_candidato_id or '' }}&q={{ filtro_busca }}&categoria={{ filtro_categoria or '' }}&uf={{ filtro_uf or '' }}&periodo={{ filtro_periodo }}"
+           class="pag-btn"><i class="fas fa-chevron-right"></i></a>
+        {% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-newspaper"></i>
+        <h3>Nenhuma notícia cadastrada</h3>
+        <p>Adicione notícias manualmente ou aguarde a coleta automática.</p>
+        <a href="{{ url_for('noticias.admin_criar') }}" class="btn-primary">
+            <i class="fas fa-plus"></i> Nova Notícia
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="admin-danger-zone">
+        <h3><i class="fas fa-exclamation-triangle"></i> Zona de perigo</h3>
+        <p>Remove permanentemente <strong>todas</strong> as {{ total_noticias }} notícias do banco.</p>
+        <form method="POST" action="{{ url_for('noticias.admin_limpar_todas') }}"
+              onsubmit="return confirm('Tem certeza? Todas as notícias serão excluídas permanentemente.')">
+            <div class="form-group inline-confirm">
+                <label for="confirmacao">Digite <strong>LIMPAR</strong> para confirmar</label>
+                <input type="text" id="confirmacao" name="confirmacao"
+                       placeholder="LIMPAR" autocomplete="off" required>
+            </div>
+            <button type="submit" class="btn-danger" {% if total_noticias == 0 %}disabled{% endif %}>
+                <i class="fas fa-trash-alt"></i> Limpar Todas as Notícias
+            </button>
+        </form>
+    </div>
+</section>
+{% endblock %}

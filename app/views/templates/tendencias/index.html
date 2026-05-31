@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% block title %}Tendências{% endblock %}
+{% block breadcrumb %}<li class="active">Tendências</li>{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="page-header">
+        <h1>Análise de Tendências</h1>
+        <p>Histórico e comparativo por cargo e estado — com base nas <strong>notícias coletadas</strong> e analisadas pelo app.</p>
+
+        <p class="dashboard-periodo-info">
+            <i class="fas fa-info-circle"></i>
+            Período: <strong>últimos {{ periodo_label }}</strong>
+            · <strong>{{ total_noticias | br_number }}</strong> notícia(s) avaliada(s) no intervalo
+            {% if confianca_baixa %}
+            <span class="dashboard-confidence-badge">
+                <i class="fas fa-exclamation-triangle"></i>
+                Amostra pequena (menos de {{ confianca_minima }}) — interprete com cautela
+            </span>
+            {% endif %}
+        </p>
+    </div>
+
+    <form method="get" class="filters-bar dashboard-filters-unified">
+        {% set auto_submit = true %}
+        {% include '_filtros_eleitorais.html' %}
+        <div class="filter-group">
+            <label for="filtro-periodo-tendencias">Período</label>
+            <select id="filtro-periodo-tendencias" name="periodo"
+                    {% if auto_submit %}onchange="this.form.submit()"{% endif %}>
+                {% for dias_opt, rotulo in periodos_opcoes %}
+                <option value="{{ dias_opt }}" {% if periodo == dias_opt %}selected{% endif %}>
+                    Últimos {{ rotulo }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if filtro_categoria or filtro_uf or periodo != periodo_padrao %}
+        <a href="{{ url_for('tendencias.index') }}" class="btn-secondary btn-sm">
+            <i class="fas fa-times"></i> Limpar
+        </a>
+        {% endif %}
+    </form>
+
+    {% if candidatos %}
+    <div class="tendencias-amostra" aria-label="Notícias avaliadas por candidato">
+        <span class="tendencias-amostra-label"><i class="fas fa-newspaper"></i> Notícias por candidato ({{ dias_tendencias }} dias):</span>
+        {% for row in tabela %}
+        <span class="tendencias-amostra-chip" style="--chip-cor: {{ row.candidato.cor }}">
+            <span class="tendencias-amostra-dot"></span>
+            {{ row.candidato.nome_abrev }}: <strong>{{ row.total_noticias | br_number }}</strong>
+        </span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Histórico — aprovação e rejeição -->
+    <div class="chart-card full" style="margin-bottom:24px">
+        <div class="chart-header">
+            <h3>Evolução de Aprovação — {{ periodo_label }}</h3>
+            <span class="chart-subtitle">% de aprovação · passe o mouse no gráfico para ver notícias do dia</span>
+        </div>
+        <div style="height:350px">
+            <canvas id="chartHistorico60"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-card full" style="margin-bottom:24px">
+        <div class="chart-header">
+            <h3>Evolução de Rejeição — {{ periodo_label }}</h3>
+            <span class="chart-subtitle">% de rejeição · baseado nas notícias coletadas no período</span>
+        </div>
+        <div style="height:350px">
+            <canvas id="chartRejeicao60"></canvas>
+        </div>
+    </div>
+
+    <!-- Menções + Radar -->
+    <div class="charts-row">
+        <div class="chart-card medium">
+            <div class="chart-header">
+                <h3>Volume de Menções — {{ periodo_label }}</h3>
+            </div>
+            <div style="height:280px">
+                <canvas id="chartMencoes60"></canvas>
+            </div>
+        </div>
+        <div class="chart-card medium">
+            <div class="chart-header">
+                <h3>Radar de Polarização</h3>
+            </div>
+            <div style="height:280px">
+                <canvas id="chartRadar"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela comparativa -->
+    <div class="table-card">
+        <div class="chart-header">
+            <h3>Tabela Comparativa — Métricas Gerais</h3>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Candidato</th>
+                        <th>Aprovação</th>
+                        <th>Rejeição</th>
+                        <th>Neutros</th>
+                        <th>Menções</th>
+                        <th>Notícias ({{ dias_tendencias }}d)</th>
+                        <th>% Pos.</th>
+                        <th>% Neg.</th>
+                        <th>Tendência</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in tabela %}
+                    {% set c = row.candidato %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('candidatos.detalhe', slug=c.slug) }}"
+                               style="display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit">
+                                <span style="width:12px; height:12px; border-radius:50%;
+                                             background:{{ c.cor }}; flex-shrink:0; display:inline-block"></span>
+                                <div>
+                                    <strong>{{ c.nome_abrev }}</strong>
+                                    <div style="font-size:12px; color:var(--text-muted)">
+                                        {{ c.escopo_label }} · {{ c.partido }}
+                                    </div>
+                                </div>
+                            </a>
+                        </td>
+                        <td style="color:#10b981; font-weight:700">{{ c.aprovacao | pct }}</td>
+                        <td style="color:#ef4444; font-weight:700">{{ c.rejeicao | pct }}</td>
+                        <td style="color:#f59e0b">{{ c.neutro | pct }}</td>
+                        <td>{{ c.mencoes | br_number }}</td>
+                        <td>
+                            <strong>{{ row.total_noticias | br_number }}</strong>
+                            {% if row.total_noticias == 0 %}
+                            <span class="text-muted" style="font-size:11px; display:block">sem notícias</span>
+                            {% endif %}
+                        </td>
+                        <td><span style="color:#10b981">{{ row.pct_positivo }}%</span></td>
+                        <td><span style="color:#ef4444">{{ row.pct_negativo }}%</span></td>
+                        <td>
+                            <span class="tendencia-badge {{ c.tendencia }}">
+                                {{ c.tendencia | tendencia_icon }} {{ c.tendencia_label }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const HIST    = {{ grafico_historico | tojson }};
+const RADAR   = {{ radar_datasets    | tojson }};
+const RLABELS = {{ radar_labels      | tojson }};
+const DIAS    = HIST.dias || {{ dias_tendencias }};
+const maxTicksX = DIAS <= 14 ? DIAS : Math.min(14, Math.max(8, Math.ceil(DIAS / 14)));
+
+Chart.defaults.color        = '#94a3b8';
+Chart.defaults.borderColor  = '#1e293b';
+Chart.defaults.font.family  = "'Inter', sans-serif";
+
+const tooltip = {
+    backgroundColor: '#1a2332', titleColor: '#f1f5f9',
+    bodyColor: '#94a3b8', borderColor: '#334155',
+    borderWidth: 1, padding: 12, cornerRadius: 8,
+};
+
+const lineChartOptions = (valorLabel) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+        legend: {
+            labels: {
+                color:'#94a3b8',
+                usePointStyle:true,
+                generateLabels(chart) {
+                    const base = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                    return base.map(item => {
+                        const ds = chart.data.datasets[item.datasetIndex];
+                        const total = ds.totalNoticias ?? 0;
+                        item.text = total
+                            ? `${ds.label} (${total} notícia${total !== 1 ? 's' : ''})`
+                            : ds.label;
+                        return item;
+                    });
+                },
+            },
+        },
+        tooltip: {
+            ...tooltip,
+            callbacks: {
+                label(c) {
+                    const pct = c.parsed.y?.toFixed(1);
+                    const n = c.dataset.noticias?.[c.dataIndex];
+                    const base = `${c.dataset.label}: ${pct}% ${valorLabel}`;
+                    if (n === undefined || n === null) return base;
+                    const suf = n === 1 ? 'notícia' : 'notícias';
+                    return n > 0 ? `${base} · ${n} ${suf} no dia` : `${base} · sem notícias no dia`;
+                },
+            },
+        },
+    },
+    scales: {
+        x: { grid:{color:'#1e293b'}, ticks:{color:'#64748b', maxTicksLimit:maxTicksX} },
+        y: {
+            grid:{color:'#1e293b'},
+            ticks:{color:'#64748b', callback: v => v+'%'},
+            min: 0,
+            max: 100,
+        },
+    },
+});
+
+// Histórico completo — aprovação
+new Chart(document.getElementById('chartHistorico60'), {
+    type: 'line',
+    data: {
+        labels: HIST.labels,
+        datasets: Object.values(HIST.candidatos).map(c => ({
+            label: c.nome,
+            data: c.aprovacoes,
+            noticias: c.noticias,
+            totalNoticias: c.total_noticias,
+            borderColor: c.cor,
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.4,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            spanGaps: false,
+        })),
+    },
+    options: lineChartOptions('aprovação'),
+});
+
+// Histórico completo — rejeição
+new Chart(document.getElementById('chartRejeicao60'), {
+    type: 'line',
+    data: {
+        labels: HIST.labels,
+        datasets: Object.values(HIST.candidatos).map(c => ({
+            label: c.nome,
+            data: c.rejeicoes,
+            noticias: c.noticias,
+            totalNoticias: c.total_noticias,
+            borderColor: c.cor,
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.4,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            spanGaps: false,
+        })),
+    },
+    options: lineChartOptions('rejeição'),
+});
+
+// Menções (linha com área — primeiros 4 candidatos)
+const top4 = Object.values(HIST.candidatos).slice(0, 4);
+new Chart(document.getElementById('chartMencoes60'), {
+    type: 'line',
+    data: {
+        labels: HIST.labels,
+        datasets: top4.map(c => ({
+            label: c.nome, data: c.mencoes,
+            borderColor: c.cor, backgroundColor: c.cor + '30',
+            borderWidth: 2, tension: 0.4, pointRadius: 0, fill: true,
+        }))
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { labels: { color:'#94a3b8', usePointStyle:true } }, tooltip },
+        scales: {
+            x: { grid:{color:'#1e293b'}, ticks:{color:'#64748b', maxTicksLimit:maxTicksX} },
+            y: { grid:{color:'#1e293b'}, ticks:{color:'#64748b'} }
+        }
+    }
+});
+
+// Radar de polarização
+new Chart(document.getElementById('chartRadar'), {
+    type: 'radar',
+    data: {
+        labels: RLABELS,
+        datasets: RADAR.map(c => ({
+            label: c.label, data: c.data,
+            borderColor: c.cor, backgroundColor: c.cor + '25',
+            borderWidth: 2, pointBackgroundColor: c.cor, pointRadius: 4,
+        }))
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color:'#94a3b8', usePointStyle:true } }, tooltip },
+        scales: {
+            r: {
+                grid: { color:'#1e293b' },
+                pointLabels: { color:'#94a3b8', font:{size:11} },
+                ticks: { color:'#64748b', backdropColor:'transparent', font:{size:10} },
+                min: 0, max: 100,
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

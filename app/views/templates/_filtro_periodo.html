@@ -1,0 +1,14 @@
+{# Filtro por faixa de tempo — incluir dentro de forms GET de notícias #}
+<div class="filter-group">
+    <label for="filtro-periodo">Período</label>
+    <select id="filtro-periodo" name="periodo"
+            {% if auto_submit %}onchange="this.form.submit()"{% endif %}>
+        <option value="">Qualquer data</option>
+        {% for val, lbl in periodos_noticias %}
+        <option value="{{ val }}"
+            {% if filtro_periodo == val %}selected{% endif %}>
+            {{ lbl }}
+        </option>
+        {% endfor %}
+    </select>
+</div>

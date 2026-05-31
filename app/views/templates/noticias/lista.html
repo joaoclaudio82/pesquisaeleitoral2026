@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Notícias{% endblock %}
+{% block breadcrumb %}<li class="active">Notícias</li>{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="page-header">
+        <h1>Notícias Rastreadas
+            <span class="badge">{{ paginacao.total }}</span>
+        </h1>
+        <p>Feed completo de notícias analisadas com sentimento e relevância eleitoral</p>
+        <div class="page-actions">
+            <a href="{{ url_for('noticias.admin') }}" class="btn-secondary">
+                <i class="fas fa-cog"></i> Administrar
+            </a>
+        </div>
+    </div>
+
+    <!-- ══ Filtros ══ -->
+    <form method="get" class="filters-bar" role="search">
+        <div class="filter-group">
+            <label for="filtro-sentimento">Sentimento</label>
+            <select id="filtro-sentimento" name="sentimento" onchange="this.form.submit()">
+                <option value="">Todos</option>
+                {% for val, lbl in [('positivo','Positivo'),('negativo','Negativo'),('neutro','Neutro')] %}
+                <option value="{{ val }}"
+                    {% if filtro_sentimento == val %}selected{% endif %}>
+                    {{ lbl }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="filtro-tema">Tema</label>
+            <select id="filtro-tema" name="tema" onchange="this.form.submit()">
+                <option value="">Todos</option>
+                {% for val, lbl in temas_opcoes %}
+                <option value="{{ val }}"
+                    {% if filtro_tema == val %}selected{% endif %}>
+                    {{ lbl }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="filtro-candidato">Candidato</label>
+            <select id="filtro-candidato" name="candidato_id" onchange="this.form.submit()">
+                <option value="">Todos os candidatos</option>
+                {% for c in candidatos %}
+                <option value="{{ c.id }}"
+                    {% if filtro_candidato_id == c.id %}selected{% endif %}>
+                    {{ c.nome_abrev }} — {{ c.escopo_label }} ({{ c.partido }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% set auto_submit = true %}
+        {% include '_filtros_eleitorais.html' %}
+        {% include '_filtro_periodo.html' %}
+
+        <div class="filter-group">
+            <label for="filtro-busca">Busca</label>
+            <input type="text" id="filtro-busca" name="q"
+                   value="{{ filtro_busca }}"
+                   placeholder="Palavras-chave..."
+                   class="filter-search">
+        </div>
+
+        <div class="filter-group" style="justify-content:flex-end">
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-search"></i> Filtrar
+            </button>
+            <a href="{{ url_for('noticias.listar') }}" class="btn-secondary">
+                <i class="fas fa-times"></i> Limpar
+            </a>
+        </div>
+    </form>
+
+    <!-- Contagem -->
+    <p class="noticias-count">
+        Exibindo <strong>{{ paginacao.items | length }}</strong>
+        de <strong>{{ paginacao.total }}</strong> notícias
+        {% if filtro_periodo_label %}
+        — <strong>{{ filtro_periodo_label }}</strong>
+        {% endif %}
+    </p>
+
+    <!-- Grid de notícias -->
+    {% if paginacao.items %}
+    <div class="noticias-grid">
+        {% for n in paginacao.items %}
+        <article class="noticia-card">
+            <div class="noticia-card-header">
+                <span class="sentimento-badge {{ n.sentimento }}">
+                    <i class="fas {% if n.sentimento == 'positivo' %}fa-smile
+                                  {% elif n.sentimento == 'negativo' %}fa-frown
+                                  {% else %}fa-meh{% endif %}"></i>
+                    {{ n.sentimento | capitalize }}
+                </span>
+                <span class="tema-badge">
+                    {{ temas_labels.get(n.tema, n.tema) }}
+                </span>
+            </div>
+
+            <h2 class="noticia-titulo">{{ n.titulo }}</h2>
+            <p class="noticia-resumo">{{ n.resumo }}</p>
+
+            <!-- Relevância -->
+            <div class="relevancia-bar" style="margin-bottom:12px">
+                <span>Relevância</span>
+                <div class="relevancia-fill">
+                    <span style="width:{{ n.relevancia }}%"></span>
+                </div>
+                <span>{{ n.relevancia }}%</span>
+            </div>
+
+            <div class="noticia-card-footer">
+                {% if n.candidato %}
+                <a href="{{ url_for('candidatos.detalhe', slug=n.candidato.slug) }}"
+                   class="noticia-candidato-tag"
+                   style="background:{{ n.candidato.cor }}">
+                    {{ n.candidato.nome_abrev }}
+                </a>
+                {% endif %}
+                <div class="noticia-footer-info">
+                    <span class="noticia-fonte">
+                        <i class="fas fa-newspaper"></i> {{ n.fonte }}
+                    </span>
+                    <span class="noticia-data">
+                        {{ n.publicada_em | tempo_relativo }}
+                    </span>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <!-- Paginação -->
+    {% if paginacao.pages > 1 %}
+    <nav class="paginacao" aria-label="Paginação">
+        {% if paginacao.has_prev %}
+        <a href="?pagina={{ paginacao.prev_num }}&sentimento={{ filtro_sentimento }}&tema={{ filtro_tema }}&candidato_id={{ filtro_candidato_id or '' }}&q={{ filtro_busca }}&categoria={{ filtro_categoria or '' }}&uf={{ filtro_uf or '' }}&periodo={{ filtro_periodo }}"
+           class="pag-btn">
+            <i class="fas fa-chevron-left"></i> Anterior
+        </a>
+        {% endif %}
+
+        {% for p in paginacao.iter_pages(left_edge=2, right_edge=2, left_current=2, right_current=2) %}
+            {% if p %}
+            <a href="?pagina={{ p }}&sentimento={{ filtro_sentimento }}&tema={{ filtro_tema }}&candidato_id={{ filtro_candidato_id or '' }}&q={{ filtro_busca }}&categoria={{ filtro_categoria or '' }}&uf={{ filtro_uf or '' }}&periodo={{ filtro_periodo }}"
+               class="pag-btn {% if p == paginacao.page %}active{% endif %}">
+                {{ p }}
+            </a>
+            {% else %}
+            <span class="pag-ellipsis">…</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if paginacao.has_next %}
+        <a href="?pagina={{ paginacao.next_num }}&sentimento={{ filtro_sentimento }}&tema={{ filtro_tema }}&candidato_id={{ filtro_candidato_id or '' }}&q={{ filtro_busca }}&categoria={{ filtro_categoria or '' }}&uf={{ filtro_uf or '' }}&periodo={{ filtro_periodo }}"
+           class="pag-btn">
+            Próximo <i class="fas fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-newspaper"></i>
+        <h3>Nenhuma notícia encontrada</h3>
+        <p>Tente ajustar os filtros de busca.</p>
+        <a href="{{ url_for('noticias.listar') }}" class="btn-secondary">
+            <i class="fas fa-times"></i> Limpar Filtros
+        </a>
+    </div>
+    {% endif %}
+
+</section>
+{% endblock %}

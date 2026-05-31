@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Nova Notícia{% endblock %}
+{% block breadcrumb %}
+<li><a href="{{ url_for('noticias.listar') }}">Notícias</a></li>
+<li><a href="{{ url_for('noticias.admin') }}">Administrar</a></li>
+<li class="active">Nova</li>
+{% endblock %}
+
+{% block content %}
+<section class="page-section form-section wide">
+    <div class="page-header">
+        <h1><i class="fas fa-plus"></i> Cadastrar Notícia</h1>
+        <p>Adicione manualmente uma notícia vinculada a um candidato monitorado</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('noticias.admin_criar') }}" class="form-card">
+
+        <div class="form-group">
+            <label for="candidato_id">Candidato <span class="required">*</span></label>
+            <select id="candidato_id" name="candidato_id" required>
+                <option value="">Selecione o candidato</option>
+                {% for c in candidatos %}
+                <option value="{{ c.id }}">
+                    {{ c.nome }} — {{ c.escopo_label }} ({{ c.partido }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="titulo">Título <span class="required">*</span></label>
+            <input type="text" id="titulo" name="titulo" required maxlength="300"
+                   placeholder="Título da notícia">
+        </div>
+
+        <div class="form-group">
+            <label for="resumo">Resumo</label>
+            <textarea id="resumo" name="resumo" rows="4"
+                      placeholder="Texto ou trecho principal da notícia"></textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="fonte">Fonte / Veículo <span class="required">*</span></label>
+                <input type="text" id="fonte" name="fonte" required
+                       placeholder="Ex: G1 / Globo">
+            </div>
+            <div class="form-group">
+                <label for="url">URL (opcional)</label>
+                <input type="url" id="url" name="url"
+                       placeholder="https://...">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="sentimento">Sentimento <span class="required">*</span></label>
+                <select id="sentimento" name="sentimento" required>
+                    {% for val, lbl in sentimentos_opcoes %}
+                    <option value="{{ val }}" {% if val == 'neutro' %}selected{% endif %}>{{ lbl }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="tema">Tema <span class="required">*</span></label>
+                <select id="tema" name="tema" required>
+                    {% for val, lbl in temas_opcoes %}
+                    <option value="{{ val }}" {% if val == 'politica' %}selected{% endif %}>{{ lbl }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="relevancia">Relevância (0–100)</label>
+                <input type="number" id="relevancia" name="relevancia"
+                       min="0" max="100" value="70">
+            </div>
+            <div class="form-group">
+                <label for="publicada_em">Data de publicação</label>
+                <input type="datetime-local" id="publicada_em" name="publicada_em">
+                <span class="form-hint">Deixe vazio para usar a data/hora atual.</span>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('noticias.admin') }}" class="btn-secondary">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-save"></i> Salvar Notícia
+            </button>
+        </div>
+    </form>
+</section>
+{% endblock %}

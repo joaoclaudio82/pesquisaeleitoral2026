@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}<li class="active">Dashboard</li>{% endblock %}
+
+{% block content %}
+<section class="page-section">
+    <div class="page-header">
+        <h1>Dashboard <span class="badge">Eleições {{ ano_eleicao }}</span></h1>
+        <p>Análise de cobertura na mídia com base nas <strong>notícias coletadas</strong> pelo app.</p>
+
+        <form method="get" class="filters-bar dashboard-filters dashboard-filters-unified">
+            {% set auto_submit = true %}
+            {% include '_filtros_eleitorais.html' %}
+            <div class="filter-group">
+                <label for="filtro-periodo">Período</label>
+                <select id="filtro-periodo" name="periodo"
+                        {% if auto_submit %}onchange="this.form.submit()"{% endif %}>
+                    {% for dias, rotulo in periodos_opcoes %}
+                    <option value="{{ dias }}" {% if periodo == dias %}selected{% endif %}>
+                        Últimos {{ rotulo }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+
+        <div class="dashboard-methodology">
+            <i class="fas fa-flask"></i>
+            <div>
+                <strong>Como funciona:</strong>
+                o sentimento é estimado por <em>palavras-chave</em> nas manchetes coletadas via Google News.
+                Isso <strong>não substitui pesquisa eleitoral</strong> — é um indicador de tom da cobertura jornalística.
+            </div>
+        </div>
+
+        <p class="dashboard-periodo-info">
+            <i class="fas fa-info-circle"></i>
+            Período: <strong>{{ periodo_label }}</strong>
+            · {{ kpi.total_noticias }} notícia(s) no intervalo
+            {% if confianca_baixa %}
+            <span class="dashboard-confidence-badge">
+                <i class="fas fa-exclamation-triangle"></i>
+                Amostra pequena (menos de {{ confianca_minima }}) — interprete com cautela
+            </span>
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- ══ Visão geral ══ -->
+    <div class="dashboard-section">
+        <h2 class="dashboard-section-title">
+            <i class="fas fa-chart-pie"></i> Visão geral
+            <span class="dashboard-section-hint">Média de todos os candidatos no período</span>
+        </h2>
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-icon positive"><i class="fas fa-smile"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Sentimento Positivo</span>
+                    <span class="kpi-value">{{ kpi.positivo | pct }}</span>
+                    <span class="kpi-change neutral">média geral · {{ periodo_label }}</span>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon negative"><i class="fas fa-frown"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Sentimento Negativo</span>
+                    <span class="kpi-value">{{ kpi.negativo | pct }}</span>
+                    <span class="kpi-change neutral">média geral · {{ periodo_label }}</span>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon neutral"><i class="fas fa-meh"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Sentimento Neutro</span>
+                    <span class="kpi-value">{{ kpi.neutro | pct }}</span>
+                    <span class="kpi-change neutral">média geral · {{ periodo_label }}</span>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon info"><i class="fas fa-newspaper"></i></div>
+                <div class="kpi-info">
+                    <span class="kpi-label">Notícias no Período</span>
+                    <span class="kpi-value">{{ kpi.total_noticias | br_number }}</span>
+                    <span class="kpi-change neutral">{{ kpi.noticias_hoje }} coletada(s) hoje (fora do filtro)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ Por candidato ══ -->
+    <div class="dashboard-section">
+        <h2 class="dashboard-section-title">
+            <i class="fas fa-users"></i> Por candidato
+            <span class="dashboard-section-hint">Compare distribuição e volume</span>
+        </h2>
+
+        <div class="charts-row">
+            <div class="chart-card full">
+                <div class="chart-header">
+                    <h3>Distribuição de Sentimento</h3>
+                    <span class="chart-subtitle">% positivo, negativo e neutro no período</span>
+                </div>
+                <div style="height:280px;">
+                    <canvas id="chartSentimento"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-row">
+            <div class="chart-card small">
+                <div class="chart-header">
+                    <h3>Notícias por Tema</h3>
+                    <span class="chart-subtitle">Assuntos mais citados · {{ periodo_label }}</span>
+                </div>
+                <div style="height:250px;">
+                    <canvas id="chartTemas"></canvas>
+                </div>
+            </div>
+            <div class="chart-card large">
+                <div class="chart-header">
+                    <h3>Quantidade de Matérias</h3>
+                    <span class="chart-subtitle">Total de notícias coletadas por candidato</span>
+                </div>
+                <div style="height:250px;">
+                    <canvas id="chartMencoes"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="ranking-card dashboard-ranking-inline">
+            <h3><i class="fas fa-trophy"></i> Ranking — % de Notícias Positivas</h3>
+            <p class="ranking-subtitle">Ordenado pelo percentual positivo · {{ kpi.total_noticias }} notícias ({{ periodo_label }})</p>
+            {% for row in ranking %}
+            {% set c = row.candidato %}
+            {% set classes = ['gold','silver','bronze','other','other','other'] %}
+            <div class="ranking-item">
+                <div class="ranking-pos {{ classes[loop.index0] if loop.index0 < 6 else 'other' }}">
+                    {{ loop.index }}
+                </div>
+                <div class="ranking-info">
+                    <a href="{{ url_for('candidatos.detalhe', slug=c.slug) }}" class="ranking-name">
+                        {{ c.nome_abrev }}
+                    </a>
+                    <div class="ranking-partido">{{ c.escopo_label }} · {{ c.partido }}</div>
+                </div>
+                <div class="ranking-bar-wrap">
+                    <div class="ranking-pct" style="color:{{ c.cor }}">
+                        {{ row.pct_positivo | pct }}
+                    </div>
+                    <div class="ranking-bar">
+                        <div class="ranking-bar-fill"
+                             style="width:{{ row.pct_positivo }}%;
+                                    background:{{ c.cor }}">
+                        </div>
+                    </div>
+                    <div class="ranking-meta">{{ row.total }} notícia(s)</div>
+                </div>
+            </div>
+            {% else %}
+            <p class="empty-ranking">Nenhuma notícia coletada neste período.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ══ Evidências ══ -->
+    <div class="dashboard-section">
+        <h2 class="dashboard-section-title">
+            <i class="fas fa-rss"></i> Evidências
+            <span class="dashboard-section-hint">Matérias que originaram os números acima</span>
+        </h2>
+        <div class="news-feed-card dashboard-feed-full">
+            <div class="news-feed">
+                {% for n in noticias_recentes %}
+                <article class="news-item">
+                    <div class="news-item-header">
+                        <span class="news-sentimento {{ n.sentimento }}">
+                            {{ n.sentimento | sentimento_icon }} {{ n.sentimento }}
+                        </span>
+                        <span class="news-tema">
+                            {{ temas_labels.get(n.tema, n.tema) }}
+                        </span>
+                    </div>
+                    <p class="news-titulo">{{ n.titulo }}</p>
+                    <div class="news-meta">
+                        <span class="news-candidato"
+                              style="background:{{ n.candidato.cor }}22;
+                                     color:{{ n.candidato.cor }}">
+                            {{ n.candidato.nome_abrev }}
+                        </span>
+                        <span class="news-fonte">
+                            {{ n.fonte }} · {{ n.publicada_em | tempo_relativo }}
+                        </span>
+                    </div>
+                </article>
+                {% else %}
+                <p class="empty-ranking">Nenhuma notícia no período selecionado.</p>
+                {% endfor %}
+            </div>
+            <a href="{{ url_for('noticias.listar') }}" class="ver-mais-link">
+                Ver todas as notícias →
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const MENT   = {{ grafico_mencoes   | tojson }};
+const SENT   = {{ grafico_sentimento| tojson }};
+const SENT_C = {{ grafico_sentimento_candidatos | tojson }};
+const TEMAS  = {{ grafico_temas     | tojson }};
+
+Chart.defaults.color        = '#94a3b8';
+Chart.defaults.borderColor  = '#1e293b';
+Chart.defaults.font.family  = "'Inter', sans-serif";
+
+const tooltip = {
+    backgroundColor: '#1a2332', titleColor: '#f1f5f9',
+    bodyColor: '#94a3b8', borderColor: '#334155',
+    borderWidth: 1, padding: 12, cornerRadius: 8,
+};
+
+// Distribuição por candidato
+const sentCandCanvas = document.getElementById('chartSentimento');
+if (SENT_C.labels?.length) {
+    new Chart(sentCandCanvas, {
+        type: 'bar',
+        data: {
+            labels: SENT_C.labels,
+            datasets: [
+                { label: 'Positivo', data: SENT_C.positivo, backgroundColor: '#10b981cc', stack: 'sent', borderRadius: 4 },
+                { label: 'Negativo', data: SENT_C.negativo, backgroundColor: '#ef4444cc', stack: 'sent', borderRadius: 4 },
+                { label: 'Neutro',   data: SENT_C.neutro,   backgroundColor: '#f59e0bcc', stack: 'sent', borderRadius: 4 },
+            ],
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#94a3b8', usePointStyle: true, pointStyleWidth: 8 } },
+                tooltip: {
+                    ...tooltip,
+                    callbacks: {
+                        label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.x?.toFixed(1)}%`,
+                        afterBody: items => {
+                            const idx = items[0]?.dataIndex ?? 0;
+                            const total = SENT_C.totais?.[idx] ?? 0;
+                            return total ? `Total: ${total} notícia(s)` : '';
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: { stacked: true, max: 100, grid: { color: '#1e293b' }, ticks: { color: '#64748b', callback: v => v + '%' } },
+                y: { stacked: true, grid: { display: false }, ticks: { color: '#94a3b8' } },
+            },
+        },
+    });
+} else {
+    new Chart(sentCandCanvas, {
+        type: 'doughnut',
+        data: {
+            labels: SENT.labels,
+            datasets: [{ data: SENT.data, backgroundColor: ['#10b981','#ef4444','#f59e0b'], borderWidth: 0, hoverOffset: 8 }],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '70%',
+            plugins: {
+                legend: { position:'bottom', labels:{color:'#94a3b8'} },
+                tooltip: { ...tooltip, callbacks: { label: c => ` ${c.label}: ${c.parsed?.toFixed(1)}%` } },
+            },
+        },
+    });
+}
+
+new Chart(document.getElementById('chartTemas'), {
+    type: 'bar',
+    data: {
+        labels: TEMAS.labels,
+        datasets: [{ label:'Notícias', data: TEMAS.data,
+            backgroundColor: ['#10b981cc','#3b82f6cc','#8b5cf6cc','#ef4444cc','#f59e0bcc','#06b6d4cc'],
+            borderRadius: 6 }],
+    },
+    options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend:{display:false}, tooltip },
+        scales: {
+            x: { grid:{color:'#1e293b'}, ticks:{color:'#64748b'} },
+            y: { grid:{display:false}, ticks:{color:'#94a3b8'} },
+        },
+    },
+});
+
+new Chart(document.getElementById('chartMencoes'), {
+    type: 'bar',
+    data: {
+        labels: MENT.labels,
+        datasets: [{ label:'Notícias coletadas', data: MENT.data,
+            backgroundColor: MENT.cores.map(c => c+'cc'),
+            borderColor: MENT.cores, borderWidth:1, borderRadius:8 }],
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend:{display:false},
+            tooltip: {
+                ...tooltip,
+                callbacks: {
+                    label: ctx => ` ${ctx.parsed.y} notícia(s)`,
+                },
+            },
+        },
+        scales: {
+            x: { grid:{display:false}, ticks:{color:'#94a3b8'} },
+            y: { grid:{color:'#1e293b'}, ticks:{color:'#64748b', stepSize: 1 } },
+        },
+    },
+});
+</script>
+{% endblock %}
