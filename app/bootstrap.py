@@ -15,11 +15,22 @@ def _is_connection_error(exc: BaseException) -> bool:
     return 'timeout' in msg or 'connection' in msg
 
 
+def _log_db_target(app) -> None:
+    from urllib.parse import urlparse
+    uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    parsed = urlparse(uri.replace('postgresql+psycopg://', 'postgresql://'))
+    host = parsed.hostname or '(sem host)'
+    port = parsed.port or 5432
+    db_name = (parsed.path or '/').lstrip('/') or '?'
+    print(f'[bootstrap] destino: {host}:{port}/{db_name}', flush=True)
+
+
 def bootstrap_database(app, env: str) -> None:
     """Inicializa schema e dados iniciais; retenta se o Postgres ainda não estiver pronto."""
     if app.config.get('_DB_READY'):
         return
 
+    _log_db_target(app)
     max_attempts = 15
     last_error = None
 

@@ -1,5 +1,5 @@
 [phases.setup]
 nixPkgs = ["postgresql"]
 
-[phases.start]
+[start]
 cmd = "python railway_entrypoint.py"
