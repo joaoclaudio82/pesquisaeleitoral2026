@@ -41,19 +41,18 @@ def create_app(env: str = None) -> Flask:
     from .auth import init_auth
     init_auth(app)
 
-    with app.app_context():
-        from .migrate import migrate_schema
-        db.create_all()
-        migrate_schema()
-        if env == 'production':
-            from .seed import seed_database
-            from .services import UsuarioService
-            # Seed leve no boot — sem 60 dias de histórico (evita timeout no Railway)
-            seed_database(gerar_historico=False)
-            UsuarioService.seed_admin_padrao()
-
     # ── Registrar Blueprints (Controllers) ────────────────────────────────
     _register_blueprints(app)
+
+    # ── Banco: imediato em dev/test; lazy em produção (health check sem DB) ──
+    from .bootstrap import bootstrap_database, register_lazy_bootstrap
+    if env == 'testing':
+        with app.app_context():
+            db.create_all()
+    elif env == 'production':
+        register_lazy_bootstrap(app, env)
+    else:
+        bootstrap_database(app, env)
 
     # ── Registrar filtros Jinja2 personalizados ────────────────────────────
     _register_jinja_filters(app)

@@ -50,7 +50,7 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'pool_recycle': 300,
-        'connect_args': {'connect_timeout': 10},
+        'connect_args': {'connect_timeout': 30},
     }
     JSON_AS_ASCII = False          # suporte a caracteres UTF-8 no JSON
     JSON_SORT_KEYS = False
