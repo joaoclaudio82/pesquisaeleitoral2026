@@ -60,7 +60,7 @@
             <h3>Evolução de Aprovação — {{ periodo_label }}</h3>
             <span class="chart-subtitle">% de aprovação · passe o mouse no gráfico para ver notícias do dia</span>
         </div>
-        <div style="height:350px">
+        <div class="chart-wrap chart-wrap--lg">
             <canvas id="chartHistorico60"></canvas>
         </div>
     </div>
@@ -70,7 +70,7 @@
             <h3>Evolução de Rejeição — {{ periodo_label }}</h3>
             <span class="chart-subtitle">% de rejeição · baseado nas notícias coletadas no período</span>
         </div>
-        <div style="height:350px">
+        <div class="chart-wrap chart-wrap--lg">
             <canvas id="chartRejeicao60"></canvas>
         </div>
     </div>
@@ -81,7 +81,7 @@
             <div class="chart-header">
                 <h3>Volume de Menções — {{ periodo_label }}</h3>
             </div>
-            <div style="height:280px">
+            <div class="chart-wrap chart-wrap--md">
                 <canvas id="chartMencoes60"></canvas>
             </div>
         </div>
@@ -89,7 +89,7 @@
             <div class="chart-header">
                 <h3>Radar de Polarização</h3>
             </div>
-            <div style="height:280px">
+            <div class="chart-wrap chart-wrap--md">
                 <canvas id="chartRadar"></canvas>
             </div>
         </div>
@@ -167,15 +167,12 @@ const RLABELS = {{ radar_labels      | tojson }};
 const DIAS    = HIST.dias || {{ dias_tendencias }};
 const maxTicksX = DIAS <= 14 ? DIAS : Math.min(14, Math.max(8, Math.ceil(DIAS / 14)));
 
-Chart.defaults.color        = '#94a3b8';
-Chart.defaults.borderColor  = '#1e293b';
+const CT = window.getChartTheme();
+Chart.defaults.color        = CT.text;
+Chart.defaults.borderColor  = CT.grid;
 Chart.defaults.font.family  = "'Inter', sans-serif";
 
-const tooltip = {
-    backgroundColor: '#1a2332', titleColor: '#f1f5f9',
-    bodyColor: '#94a3b8', borderColor: '#334155',
-    borderWidth: 1, padding: 12, cornerRadius: 8,
-};
+const tooltip = CT.tooltip;
 
 const lineChartOptions = (valorLabel) => ({
     responsive: true,
@@ -184,7 +181,7 @@ const lineChartOptions = (valorLabel) => ({
     plugins: {
         legend: {
             labels: {
-                color:'#94a3b8',
+                color: CT.text,
                 usePointStyle:true,
                 generateLabels(chart) {
                     const base = Chart.defaults.plugins.legend.labels.generateLabels(chart);
@@ -214,10 +211,10 @@ const lineChartOptions = (valorLabel) => ({
         },
     },
     scales: {
-        x: { grid:{color:'#1e293b'}, ticks:{color:'#64748b', maxTicksLimit:maxTicksX} },
+        x: { grid:{color: CT.grid}, ticks:{color: CT.muted, maxTicksLimit:maxTicksX} },
         y: {
-            grid:{color:'#1e293b'},
-            ticks:{color:'#64748b', callback: v => v+'%'},
+            grid:{color: CT.grid},
+            ticks:{color: CT.muted, callback: v => v+'%'},
             min: 0,
             max: 100,
         },
@@ -283,10 +280,10 @@ new Chart(document.getElementById('chartMencoes60'), {
     options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { labels: { color:'#94a3b8', usePointStyle:true } }, tooltip },
+        plugins: { legend: { labels: { color: CT.text, usePointStyle:true } }, tooltip },
         scales: {
-            x: { grid:{color:'#1e293b'}, ticks:{color:'#64748b', maxTicksLimit:maxTicksX} },
-            y: { grid:{color:'#1e293b'}, ticks:{color:'#64748b'} }
+            x: { grid:{color: CT.grid}, ticks:{color: CT.muted, maxTicksLimit:maxTicksX} },
+            y: { grid:{color: CT.grid}, ticks:{color: CT.muted} }
         }
     }
 });
@@ -304,12 +301,12 @@ new Chart(document.getElementById('chartRadar'), {
     },
     options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color:'#94a3b8', usePointStyle:true } }, tooltip },
+        plugins: { legend: { labels: { color: CT.text, usePointStyle:true } }, tooltip },
         scales: {
             r: {
-                grid: { color:'#1e293b' },
-                pointLabels: { color:'#94a3b8', font:{size:11} },
-                ticks: { color:'#64748b', backdropColor:'transparent', font:{size:10} },
+                grid: { color: CT.grid },
+                pointLabels: { color: CT.text, font:{size:11} },
+                ticks: { color: CT.muted, backdropColor:'transparent', font:{size:10} },
                 min: 0, max: 100,
             }
         }

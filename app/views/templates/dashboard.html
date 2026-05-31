@@ -101,7 +101,7 @@
                     <h3>Distribuição de Sentimento</h3>
                     <span class="chart-subtitle">% positivo, negativo e neutro no período</span>
                 </div>
-                <div style="height:280px;">
+                <div class="chart-wrap chart-wrap--md">
                     <canvas id="chartSentimento"></canvas>
                 </div>
             </div>
@@ -113,7 +113,7 @@
                     <h3>Notícias por Tema</h3>
                     <span class="chart-subtitle">Assuntos mais citados · {{ periodo_label }}</span>
                 </div>
-                <div style="height:250px;">
+                <div class="chart-wrap chart-wrap--sm">
                     <canvas id="chartTemas"></canvas>
                 </div>
             </div>
@@ -122,7 +122,7 @@
                     <h3>Quantidade de Matérias</h3>
                     <span class="chart-subtitle">Total de notícias coletadas por candidato</span>
                 </div>
-                <div style="height:250px;">
+                <div class="chart-wrap chart-wrap--sm">
                     <canvas id="chartMencoes"></canvas>
                 </div>
             </div>
@@ -212,15 +212,12 @@ const SENT   = {{ grafico_sentimento| tojson }};
 const SENT_C = {{ grafico_sentimento_candidatos | tojson }};
 const TEMAS  = {{ grafico_temas     | tojson }};
 
-Chart.defaults.color        = '#94a3b8';
-Chart.defaults.borderColor  = '#1e293b';
+const CT = window.getChartTheme();
+Chart.defaults.color        = CT.text;
+Chart.defaults.borderColor  = CT.grid;
 Chart.defaults.font.family  = "'Inter', sans-serif";
 
-const tooltip = {
-    backgroundColor: '#1a2332', titleColor: '#f1f5f9',
-    bodyColor: '#94a3b8', borderColor: '#334155',
-    borderWidth: 1, padding: 12, cornerRadius: 8,
-};
+const tooltip = CT.tooltip;
 
 // Distribuição por candidato
 const sentCandCanvas = document.getElementById('chartSentimento');
@@ -240,7 +237,7 @@ if (SENT_C.labels?.length) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'bottom', labels: { color: '#94a3b8', usePointStyle: true, pointStyleWidth: 8 } },
+                legend: { position: 'bottom', labels: { color: CT.text, usePointStyle: true, pointStyleWidth: 8 } },
                 tooltip: {
                     ...tooltip,
                     callbacks: {
@@ -254,8 +251,8 @@ if (SENT_C.labels?.length) {
                 },
             },
             scales: {
-                x: { stacked: true, max: 100, grid: { color: '#1e293b' }, ticks: { color: '#64748b', callback: v => v + '%' } },
-                y: { stacked: true, grid: { display: false }, ticks: { color: '#94a3b8' } },
+                x: { stacked: true, max: 100, grid: { color: CT.grid }, ticks: { color: CT.muted, callback: v => v + '%' } },
+                y: { stacked: true, grid: { display: false }, ticks: { color: CT.text } },
             },
         },
     });
@@ -269,7 +266,7 @@ if (SENT_C.labels?.length) {
         options: {
             responsive: true, maintainAspectRatio: false, cutout: '70%',
             plugins: {
-                legend: { position:'bottom', labels:{color:'#94a3b8'} },
+                legend: { position:'bottom', labels:{color: CT.text} },
                 tooltip: { ...tooltip, callbacks: { label: c => ` ${c.label}: ${c.parsed?.toFixed(1)}%` } },
             },
         },
@@ -288,8 +285,8 @@ new Chart(document.getElementById('chartTemas'), {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
         plugins: { legend:{display:false}, tooltip },
         scales: {
-            x: { grid:{color:'#1e293b'}, ticks:{color:'#64748b'} },
-            y: { grid:{display:false}, ticks:{color:'#94a3b8'} },
+            x: { grid:{color: CT.grid}, ticks:{color: CT.muted} },
+            y: { grid:{display:false}, ticks:{color: CT.text} },
         },
     },
 });
@@ -314,8 +311,8 @@ new Chart(document.getElementById('chartMencoes'), {
             },
         },
         scales: {
-            x: { grid:{display:false}, ticks:{color:'#94a3b8'} },
-            y: { grid:{color:'#1e293b'}, ticks:{color:'#64748b', stepSize: 1 } },
+            x: { grid:{display:false}, ticks:{color: CT.text} },
+            y: { grid:{color: CT.grid}, ticks:{color: CT.muted, stepSize: 1 } },
         },
     },
 });

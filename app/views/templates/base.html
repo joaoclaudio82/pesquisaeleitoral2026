@@ -1,9 +1,16 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0e1a" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f1f5f9" media="(prefers-color-scheme: light)">
     <title>{% block title %}{{ app_nome }}{% endblock %} — Pesquisa Eleitoral {{ ano_eleicao }}</title>
+
+    <script>
+    (function(){var t=localStorage.getItem('eleitoral-theme')||'dark';
+    document.documentElement.setAttribute('data-theme',t);})();
+    </script>
 
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -15,6 +22,8 @@
     {% block head %}{% endblock %}
 </head>
 <body>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
 
     <!-- ══════════════ SIDEBAR ══════════════ -->
     <aside class="sidebar" id="sidebar">
@@ -98,9 +107,14 @@
                 </nav>
             </div>
             <div class="topbar-right">
+                <button type="button" class="theme-toggle" id="themeToggle"
+                        aria-label="Alternar tema claro ou escuro" title="Tema claro/escuro">
+                    <i class="fas fa-sun theme-icon-light" aria-hidden="true"></i>
+                    <i class="fas fa-moon theme-icon-dark" aria-hidden="true"></i>
+                </button>
                 {% if pode_escrever %}
-                <a href="{{ url_for('candidatos.criar') }}" class="btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> Cadastrar
+                <a href="{{ url_for('candidatos.criar') }}" class="btn-primary btn-sm" title="Cadastrar candidato">
+                    <i class="fas fa-plus"></i><span class="btn-label"> Cadastrar</span>
                 </a>
                 <button class="btn-refresh" id="refreshBtn" title="Simular atualização">
                     <i class="fas fa-sync-alt"></i>
@@ -108,11 +122,11 @@
                 {% endif %}
                 {% if not pode_escrever %}
                 <span class="viewer-badge" title="Perfil somente leitura">
-                    <i class="fas fa-eye"></i> Somente leitura
+                    <i class="fas fa-eye"></i> <span class="label-text">Somente leitura</span>
                 </span>
                 {% endif %}
                 <span class="live-badge">
-                    <span class="pulse"></span>AO VIVO
+                    <span class="pulse"></span><span class="live-text">AO VIVO</span>
                 </span>
             </div>
         </header>

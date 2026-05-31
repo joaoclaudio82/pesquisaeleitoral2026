@@ -91,7 +91,7 @@
         <div class="chart-header">
             <h3>Evolução de Aprovação e Rejeição — 60 dias</h3>
         </div>
-        <div style="height:300px">
+        <div class="chart-wrap chart-wrap--md">
             <canvas id="chartHistorico"></canvas>
         </div>
     </div>
@@ -156,8 +156,9 @@ const APROV  = {{ historico_aprov  | tojson }};
 const REJEIT = {{ historico_rejeit | tojson }};
 const COR    = '{{ candidato.cor }}';
 
-Chart.defaults.color       = '#94a3b8';
-Chart.defaults.borderColor = '#1e293b';
+const CT = window.getChartTheme();
+Chart.defaults.color       = CT.text;
+Chart.defaults.borderColor = CT.grid;
 
 new Chart(document.getElementById('chartHistorico'), {
     type: 'line',
@@ -190,17 +191,15 @@ new Chart(document.getElementById('chartHistorico'), {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-            legend: { labels: { color: '#94a3b8', usePointStyle: true } },
+            legend: { labels: { color: CT.text, usePointStyle: true } },
             tooltip: {
-                backgroundColor: '#1a2332', titleColor: '#f1f5f9',
-                bodyColor: '#94a3b8', borderColor: '#334155',
-                borderWidth: 1, padding: 12, cornerRadius: 8,
+                ...CT.tooltip,
                 callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y?.toFixed(1)}%` }
             }
         },
         scales: {
-            x: { grid:{color:'#1e293b'}, ticks:{color:'#64748b', maxTicksLimit:10} },
-            y: { grid:{color:'#1e293b'}, ticks:{color:'#64748b', callback: v => v+'%'} }
+            x: { grid:{color: CT.grid}, ticks:{color: CT.muted, maxTicksLimit:10} },
+            y: { grid:{color: CT.grid}, ticks:{color: CT.muted, callback: v => v+'%'} }
         }
     }
 });

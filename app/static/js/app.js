@@ -4,32 +4,108 @@
    ======================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     initSidebar();
     initRefreshBtn();
     initFlashAutoClose();
     initTemaCheckboxes();
 });
 
+/* ── Tema claro / escuro ─────────────────── */
+function initTheme() {
+    const btn = document.getElementById('themeToggle');
+    const apply = (theme) => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('eleitoral-theme', theme);
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            meta.content = theme === 'light' ? '#f1f5f9' : '#0a0e1a';
+        }
+        document.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
+    };
+
+    btn?.addEventListener('click', () => {
+        const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+        apply(cur === 'dark' ? 'light' : 'dark');
+        if (document.querySelector('canvas')) {
+            window.location.reload();
+        }
+    });
+}
+
+window.getChartTheme = function getChartTheme() {
+    const s = getComputedStyle(document.documentElement);
+    const g = (v) => s.getPropertyValue(v).trim();
+    const text = g('--text') || '#f1f5f9';
+    return {
+        text: g('--chart-text') || '#94a3b8',
+        muted: g('--chart-muted') || '#64748b',
+        grid: g('--chart-grid') || '#1e293b',
+        title: text,
+        tooltip: {
+            backgroundColor: g('--chart-tooltip-bg') || '#1a2332',
+            titleColor: text,
+            bodyColor: g('--chart-text') || '#94a3b8',
+            borderColor: g('--chart-tooltip-border') || '#334155',
+            borderWidth: 1,
+            padding: 12,
+            cornerRadius: 8,
+        },
+    };
+};
+
 /* ── Sidebar mobile ──────────────────────── */
 function initSidebar() {
-    const sidebar    = document.getElementById('sidebar');
-    const menuBtn    = document.getElementById('menuBtn');
-    const toggleBtn  = document.getElementById('sidebarToggle');
+    const sidebar   = document.getElementById('sidebar');
+    const menuBtn   = document.getElementById('menuBtn');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const overlay   = document.getElementById('sidebarOverlay');
 
     if (!sidebar) return;
 
-    const toggle = () => sidebar.classList.toggle('open');
+    const open = () => {
+        sidebar.classList.add('open');
+        overlay?.classList.add('visible');
+        overlay?.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('sidebar-open');
+    };
 
-    menuBtn  ?.addEventListener('click', toggle);
-    toggleBtn?.addEventListener('click', toggle);
+    const close = () => {
+        sidebar.classList.remove('open');
+        overlay?.classList.remove('visible');
+        overlay?.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('sidebar-open');
+    };
 
-    // Fechar ao clicar fora no mobile
+    const toggle = () => {
+        if (sidebar.classList.contains('open')) close();
+        else open();
+    };
+
+    menuBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggle();
+    });
+
+    toggleBtn?.addEventListener('click', close);
+    overlay?.addEventListener('click', close);
+
+    sidebar.querySelectorAll('.nav-item').forEach((link) => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) close();
+        });
+    });
+
     document.addEventListener('click', (e) => {
         if (window.innerWidth > 768) return;
-        if (!sidebar.contains(e.target) &&
-            !menuBtn?.contains(e.target)) {
-            sidebar.classList.remove('open');
+        if (!sidebar.classList.contains('open')) return;
+        if (!sidebar.contains(e.target) && !menuBtn?.contains(e.target)) {
+            close();
         }
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) close();
     });
 }
 
@@ -51,7 +127,6 @@ function initRefreshBtn() {
                     `✅ ${json.data.candidatos_atualizados} candidatos atualizados!`,
                     'success'
                 );
-                // Recarregar a página após 1.5s para refletir novos dados
                 setTimeout(() => window.location.reload(), 1500);
             } else {
                 showToast('Erro ao atualizar dados.', 'error');
@@ -107,5 +182,4 @@ function showToast(message, type = 'info') {
     }, 3500);
 }
 
-/* ── Expõe globalmente para uso inline ────── */
 window.showToast = showToast;

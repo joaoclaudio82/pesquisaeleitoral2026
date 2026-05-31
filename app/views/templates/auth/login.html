@@ -1,14 +1,26 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0e1a">
     <title>Login — {{ app_nome }}</title>
+    <script>
+    (function(){var t=localStorage.getItem('eleitoral-theme')||'dark';
+    document.documentElement.setAttribute('data-theme',t);})();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body class="auth-page">
+    <div class="auth-theme-wrap">
+        <button type="button" class="theme-toggle" id="themeToggle"
+                aria-label="Alternar tema claro ou escuro" title="Tema claro/escuro">
+            <i class="fas fa-sun theme-icon-light" aria-hidden="true"></i>
+            <i class="fas fa-moon theme-icon-dark" aria-hidden="true"></i>
+        </button>
+    </div>
     <div class="auth-card">
         <div class="auth-brand">
             <i class="fas fa-vote-yea"></i>
@@ -46,5 +58,6 @@
             </button>
         </form>
     </div>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

@@ -1,13 +1,16 @@
 /* ========================================
    PESQUISA ELEITORAL 2026 — STYLESHEET
-   Design System Dark Mode — Flask/MVC
+   Design System — Dark / Light + Mobile
    ======================================== */
 
-:root {
+:root,
+[data-theme="dark"] {
+    color-scheme: dark;
     --bg-primary:    #0a0e1a;
     --bg-secondary:  #111827;
     --bg-card:       #1a2332;
     --bg-sidebar:    #0d1321;
+    --bg-elevated:   #243044;
     --accent:        #6366f1;
     --accent-hover:  #8b5cf6;
     --green:         #10b981;
@@ -16,25 +19,63 @@
     --blue:          #3b82f6;
     --cyan:          #06b6d4;
     --text:          #f1f5f9;
+    --text-primary:  #f1f5f9;
     --text-sec:      #94a3b8;
+    --text-secondary:#94a3b8;
     --text-muted:    #64748b;
     --border:        #1e293b;
     --border-hover:  #334155;
+    --nav-hover:     rgba(99,102,241,.08);
+    --nav-active:    rgba(99,102,241,.12);
     --shadow:        0 4px 24px rgba(0,0,0,.4);
     --shadow-sm:     0 2px 8px rgba(0,0,0,.3);
+    --overlay:       rgba(0,0,0,.55);
+    --chart-text:    #94a3b8;
+    --chart-muted:   #64748b;
+    --chart-grid:    #1e293b;
+    --chart-tooltip-bg:     #1a2332;
+    --chart-tooltip-border: #334155;
     --r:             12px;
     --r-sm:          8px;
     --r-lg:          16px;
-    --sidebar-w:     240px;
-    --topbar-h:      64px;
+    --sidebar-w:     260px;
+    --topbar-h:      56px;
     --transition:    all .2s ease;
+}
+
+[data-theme="light"] {
+    color-scheme: light;
+    --bg-primary:    #f1f5f9;
+    --bg-secondary:  #ffffff;
+    --bg-card:       #ffffff;
+    --bg-sidebar:    #ffffff;
+    --bg-elevated:   #e2e8f0;
+    --text:          #0f172a;
+    --text-primary:  #0f172a;
+    --text-sec:      #475569;
+    --text-secondary:#475569;
+    --text-muted:    #64748b;
+    --border:        #e2e8f0;
+    --border-hover:  #cbd5e1;
+    --nav-hover:     rgba(99,102,241,.06);
+    --nav-active:    rgba(99,102,241,.1);
+    --shadow:        0 4px 24px rgba(15,23,42,.08);
+    --shadow-sm:     0 2px 8px rgba(15,23,42,.06);
+    --overlay:       rgba(15,23,42,.35);
+    --chart-text:    #475569;
+    --chart-muted:   #64748b;
+    --chart-grid:    #e2e8f0;
+    --chart-tooltip-bg:     #ffffff;
+    --chart-tooltip-border: #cbd5e1;
 }
 
 /* ── Reset ──────────────────────────────── */
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
 html { scroll-behavior:smooth; }
 body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg-primary);
-       color:var(--text); display:flex; min-height:100vh; overflow-x:hidden; }
+       color:var(--text); display:flex; min-height:100vh; min-height:100dvh;
+       overflow-x:hidden; -webkit-text-size-adjust:100%; }
+body.sidebar-open { overflow:hidden; }
 a { text-decoration:none; color:inherit; }
 button { cursor:pointer; border:none; background:none; font-family:inherit; }
 input,select,textarea { font-family:inherit; }
@@ -70,8 +111,8 @@ img { max-width:100%; }
 .nav-item { display:flex; align-items:center; gap:12px; padding:12px 20px;
     color:var(--text-sec); transition:var(--transition); position:relative;
     font-size:14px; font-weight:500; }
-.nav-item:hover { color:var(--text); background:rgba(99,102,241,.08); }
-.nav-item.active { color:var(--accent); background:rgba(99,102,241,.12); }
+.nav-item:hover { color:var(--text); background:var(--nav-hover); }
+.nav-item.active { color:var(--accent); background:var(--nav-active); }
 .nav-item.active::before { content:''; position:absolute; left:0; top:0;
     bottom:0; width:3px; background:var(--accent); border-radius:0 2px 2px 0; }
 .nav-item i { width:18px; text-align:center; font-size:15px; }
@@ -359,7 +400,7 @@ img { max-width:100%; }
 .tendencias-amostra-chip {
     display:inline-flex; align-items:center; gap:6px;
     padding:4px 10px; border-radius:999px;
-    background:rgba(255,255,255,.04); border:1px solid var(--border);
+    background:var(--nav-hover); border:1px solid var(--border);
     color:var(--text-primary); font-size:12px;
 }
 .tendencias-amostra-dot {
@@ -672,6 +713,39 @@ img { max-width:100%; }
 .schema-constraints ul { margin-top:8px; padding-left:20px; }
 
 /* ══════════════════════════════════════════
+   TEMA + MOBILE
+══════════════════════════════════════════ */
+.sidebar-overlay {
+    display:none; position:fixed; inset:0; background:var(--overlay);
+    z-index:90; opacity:0; transition:opacity .25s ease;
+}
+.sidebar-overlay.visible { display:block; opacity:1; }
+
+.theme-toggle {
+    width:40px; height:40px; border-radius:var(--r-sm);
+    background:var(--bg-card); border:1px solid var(--border);
+    color:var(--text-sec); font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+    transition:var(--transition); flex-shrink:0;
+}
+.theme-toggle:hover { color:var(--accent); border-color:var(--accent); }
+.theme-toggle .theme-icon-light { display:none; }
+[data-theme="light"] .theme-toggle .theme-icon-light { display:inline; }
+[data-theme="light"] .theme-toggle .theme-icon-dark { display:none; }
+
+.auth-theme-wrap {
+    position:fixed; top:max(16px, env(safe-area-inset-top));
+    right:max(16px, env(safe-area-inset-right)); z-index:10;
+}
+
+.chart-wrap { position:relative; width:100%; }
+.chart-wrap--sm { height:220px; }
+.chart-wrap--md { height:280px; }
+.chart-wrap--lg { height:350px; }
+
+.btn-label { white-space:nowrap; }
+
+/* ══════════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════════ */
 @media (max-width:1200px) {
@@ -680,21 +754,54 @@ img { max-width:100%; }
 @media (max-width:1024px) {
     .charts-row { flex-direction:column; }
     .bottom-row { grid-template-columns:1fr; }
+    .chart-wrap--lg { height:300px; }
 }
 @media (max-width:768px) {
-    .sidebar { transform:translateX(-100%); }
+    .sidebar {
+        transform:translateX(-100%);
+        width:min(var(--sidebar-w), 88vw);
+        padding-bottom:env(safe-area-inset-bottom);
+    }
     .sidebar.open { transform:translateX(0); box-shadow:var(--shadow); }
     .main-content { margin-left:0; }
-    .menu-btn { display:flex; }
+    .menu-btn { display:flex; align-items:center; justify-content:center;
+        width:40px; height:40px; }
     .kpi-grid { grid-template-columns:1fr 1fr; }
-    .page-section { padding:16px; }
+    .page-section { padding:16px; padding-bottom:max(16px, env(safe-area-inset-bottom)); }
+    .page-header h1 { font-size:22px; flex-wrap:wrap; }
     .noticias-grid { grid-template-columns:1fr; }
     .candidatos-grid { grid-template-columns:1fr; }
     .filters-bar { flex-direction:column; align-items:stretch; }
+    .filter-search { width:100%; }
     .form-row { grid-template-columns:1fr; }
     .temas-check-grid { grid-template-columns:repeat(2,1fr); }
+    .topbar { padding:0 12px; gap:8px; }
+    .topbar-right { gap:8px; flex-shrink:1; justify-content:flex-end; }
+    .breadcrumb { display:none; }
+    .topbar-right .btn-primary .btn-label { display:none; }
+    .topbar-right .btn-primary { padding:0; width:40px; height:40px;
+        justify-content:center; border-radius:var(--r-sm); }
+    .viewer-badge span.label-text { display:none; }
+    .live-badge .live-text { display:none; }
+    .flash-container { padding:0 12px; }
+    .candidato-detalhe-header { flex-direction:column; align-items:flex-start; }
+    .candidato-form-preview { flex-direction:column; align-items:flex-start; }
+    .chart-wrap--md { height:240px; }
+    .chart-wrap--lg { height:260px; }
+    .chart-wrap--sm { height:200px; }
+    .toast { left:12px; right:12px; bottom:max(12px, env(safe-area-inset-bottom)); max-width:none; }
+    .paginacao { gap:4px; }
+    .pag-btn { padding:10px 12px; min-height:44px; }
+    .nav-item { padding:14px 20px; min-height:48px; }
 }
 @media (max-width:480px) {
     .kpi-grid { grid-template-columns:1fr; }
-    .topbar { padding:0 16px; }
+    .kpi-value { font-size:24px; }
+    .periodo-btns { width:100%; }
+    .periodo-btns .chart-btn { flex:1; text-align:center; min-height:40px; }
+    .chart-view-toggle { width:100%; }
+    .chart-view-toggle .chart-btn { flex:1; min-height:40px; }
+    .auth-card { padding:24px 20px; }
+    .form-card { padding:20px 16px; }
+    .tendencias-amostra { flex-direction:column; align-items:flex-start; }
 }
