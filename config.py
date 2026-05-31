@@ -12,7 +12,18 @@ load_dotenv()
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 
-def _database_uri(*, exigir_database_url: bool = False) -> str:
+def _normalize_psycopg_url(url: str, *, ssl: bool = False) -> str:
+    if url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql://', 1)
+    if url.startswith('postgresql://'):
+        url = url.replace('postgresql://', 'postgresql+psycopg://', 1)
+    if ssl and 'sslmode=' not in url:
+        sep = '&' if '?' in url else '?'
+        url = f'{url}{sep}sslmode=require'
+    return url
+
+
+def _database_uri(*, exigir_database_url: bool = False, public: bool = False) -> str:
     """
     Monta a URI do PostgreSQL a partir de DATABASE_URL ou variáveis POSTGRES_*.
     Usa driver psycopg v3 (postgresql+psycopg://).
@@ -20,27 +31,38 @@ def _database_uri(*, exigir_database_url: bool = False) -> str:
     Em produção (Railway), DATABASE_URL deve apontar para o Postgres do serviço —
     não use POSTGRES_HOST=localhost do ambiente local.
     """
+    if public:
+        url = os.environ.get('DATABASE_PUBLIC_URL', '').strip()
+        if not url and exigir_database_url:
+            raise RuntimeError('DATABASE_PUBLIC_URL não configurada.')
+        return _normalize_psycopg_url(url, ssl=True) if url else ''
+
     url = os.environ.get('DATABASE_URL', '').strip()
     if url:
-        if url.startswith('postgres://'):
-            url = url.replace('postgres://', 'postgresql://', 1)
-    elif exigir_database_url:
+        return _normalize_psycopg_url(url)
+    if exigir_database_url:
         raise RuntimeError(
             'DATABASE_URL não configurada. No Railway: serviço Web → Variables → '
-            'Add Reference → Postgres → DATABASE_URL. '
+            'Add Reference → Postgres → DATABASE_URL e DATABASE_PUBLIC_URL. '
             'Remova POSTGRES_HOST/POSTGRES_PORT locais (localhost/5433).'
         )
-    else:
-        user = os.environ.get('POSTGRES_USER', 'eleitoral')
-        password = os.environ.get('POSTGRES_PASSWORD', 'eleitoral')
-        host = os.environ.get('POSTGRES_HOST', 'localhost')
-        port = os.environ.get('POSTGRES_PORT', '5432')
-        db_name = os.environ.get('POSTGRES_DB', 'eleitoral2026')
-        url = f'postgresql://{user}:{password}@{host}:{port}/{db_name}'
 
-    if url.startswith('postgresql://'):
-        url = url.replace('postgresql://', 'postgresql+psycopg://', 1)
-    return url
+    user = os.environ.get('POSTGRES_USER', 'eleitoral')
+    password = os.environ.get('POSTGRES_PASSWORD', 'eleitoral')
+    host = os.environ.get('POSTGRES_HOST', 'localhost')
+    port = os.environ.get('POSTGRES_PORT', '5432')
+    db_name = os.environ.get('POSTGRES_DB', 'eleitoral2026')
+    return _normalize_psycopg_url(
+        f'postgresql://{user}:{password}@{host}:{port}/{db_name}'
+    )
+
+
+def rebind_database(app, uri: str) -> None:
+    """Troca a URI do banco em runtime (fallback Railway public URL)."""
+    from app.database import db
+    app.config['SQLALCHEMY_DATABASE_URI'] = uri
+    db.session.remove()
+    db.engine.dispose()
 
 
 class Config:
