@@ -71,7 +71,7 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     """Ambiente de produção."""
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = _database_uri(exigir_database_url=True)
+    # URI definida em create_app() — exige DATABASE_URL só ao subir em produção
 
 
 # Mapeamento de ambientes

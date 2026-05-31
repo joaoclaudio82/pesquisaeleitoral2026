@@ -5,7 +5,7 @@ Padrão Application Factory + Blueprints (MVC)
 import os
 from flask import Flask
 from .database import db
-from config import config_map
+from config import config_map, _database_uri
 
 
 def create_app(env: str = None) -> Flask:
@@ -29,6 +29,8 @@ def create_app(env: str = None) -> Flask:
     # ── Carregar configuração ──────────────────────────────────────────────
     env = env or os.environ.get('FLASK_ENV', 'development')
     app.config.from_object(config_map.get(env, config_map['default']))
+    if env == 'production':
+        app.config['SQLALCHEMY_DATABASE_URI'] = _database_uri(exigir_database_url=True)
 
     # Pasta instance (logs/uploads locais, se necessário)
     os.makedirs(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'instance'), exist_ok=True)
