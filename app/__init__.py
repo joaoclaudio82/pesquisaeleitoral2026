@@ -44,14 +44,12 @@ def create_app(env: str = None) -> Flask:
     # ── Registrar Blueprints (Controllers) ────────────────────────────────
     _register_blueprints(app)
 
-    # ── Banco: imediato em dev/test; lazy em produção (health check sem DB) ──
-    from .bootstrap import bootstrap_database, register_lazy_bootstrap
+    # ── Banco: dev/test no boot; produção via railway_entrypoint.py antes do Gunicorn ──
+    from .bootstrap import bootstrap_database
     if env == 'testing':
         with app.app_context():
             db.create_all()
-    elif env == 'production':
-        register_lazy_bootstrap(app, env)
-    else:
+    elif env != 'production':
         bootstrap_database(app, env)
 
     # ── Registrar filtros Jinja2 personalizados ────────────────────────────

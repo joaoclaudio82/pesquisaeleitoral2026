@@ -14,6 +14,7 @@ login_manager.login_message_category = 'warning'
 _PUBLIC_ENDPOINTS = frozenset({
     'auth.login',
     'main.health',
+    'main.favicon',
     'static',
 })
 

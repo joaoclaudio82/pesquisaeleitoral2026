@@ -3,9 +3,16 @@ Bootstrap do banco — create_all, migrate e seed com retry (Railway).
 """
 import time
 
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import DBAPIError, OperationalError
 
 from .database import db
+
+
+def _is_connection_error(exc: BaseException) -> bool:
+    if isinstance(exc, (OperationalError, DBAPIError, OSError)):
+        return True
+    msg = str(exc).lower()
+    return 'timeout' in msg or 'connection' in msg
 
 
 def bootstrap_database(app, env: str) -> None:
@@ -13,11 +20,12 @@ def bootstrap_database(app, env: str) -> None:
     if app.config.get('_DB_READY'):
         return
 
-    max_attempts = 10
+    max_attempts = 15
     last_error = None
 
     for attempt in range(1, max_attempts + 1):
         try:
+            print(f'[bootstrap] tentativa {attempt}/{max_attempts}...', flush=True)
             with app.app_context():
                 from .migrate import migrate_schema
                 db.create_all()
@@ -28,29 +36,18 @@ def bootstrap_database(app, env: str) -> None:
                     seed_database(gerar_historico=False)
                     UsuarioService.seed_admin_padrao()
             app.config['_DB_READY'] = True
+            print('[bootstrap] concluido.', flush=True)
             return
-        except OperationalError as exc:
+        except Exception as exc:
+            if not _is_connection_error(exc):
+                raise
             last_error = exc
+            print(f'[bootstrap] Postgres indisponivel: {exc}', flush=True)
             db.session.remove()
             db.engine.dispose()
             if attempt == max_attempts:
                 raise
-            time.sleep(min(attempt * 2, 15))
+            time.sleep(min(attempt * 2, 10))
 
     if last_error:
         raise last_error
-
-
-def register_lazy_bootstrap(app, env: str) -> None:
-    """Em produção, adia conexão ao Postgres até a primeira requisição (exceto /health)."""
-
-    @app.before_request
-    def _ensure_db_ready():
-        if app.config.get('_DB_READY'):
-            return None
-        from flask import request
-        endpoint = request.endpoint or ''
-        if endpoint in ('main.health',) or endpoint.startswith('static'):
-            return None
-        bootstrap_database(app, env)
-        return None

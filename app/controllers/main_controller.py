@@ -20,6 +20,12 @@ def health():
     return {'status': 'ok'}, 200
 
 
+@main_bp.get('/favicon.ico')
+def favicon():
+    """Evita 404/500 no favicon do navegador."""
+    return '', 204
+
+
 @main_bp.get('/')
 def dashboard():
     """
