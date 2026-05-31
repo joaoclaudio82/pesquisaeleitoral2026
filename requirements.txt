@@ -1,28 +1,10 @@
-# ══════════════════════════════════════════════
-# Pesquisa Eleitoral 2026 — Dependências Python
-# ══════════════════════════════════════════════
-
-# Framework web
 Flask==3.0.3
-
-# ORM / Banco de dados
 Flask-SQLAlchemy==3.1.1
-SQLAlchemy>=2.0.36
-
-# Utilidades
-python-slugify==8.0.4       # geração de slugs amigáveis
-python-dotenv==1.0.1        # leitura de .env
-feedparser==6.0.11          # RSS Google News — coleta retroativa
-requests==2.32.3            # busca de fotos (Wikipedia)
-
-# (Opcional) Scheduler para coleta automática em background
-# APScheduler==3.10.4
-
-# Driver PostgreSQL
-psycopg2-binary==2.9.9
-
-# Autenticação
+SQLAlchemy==2.0.41
+python-slugify==8.0.4
+python-dotenv==1.0.1
+feedparser==6.0.11
+requests==2.32.3
+psycopg[binary]==3.2.9
 Flask-Login==0.6.3
-
-# (Opcional) Para deploy com gunicorn
 gunicorn==22.0.0

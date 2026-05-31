@@ -15,19 +15,23 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 def _database_uri() -> str:
     """
     Monta a URI do PostgreSQL a partir de DATABASE_URL ou variáveis POSTGRES_*.
+    Usa driver psycopg v3 (postgresql+psycopg://).
     """
     url = os.environ.get('DATABASE_URL')
     if url:
         if url.startswith('postgres://'):
             url = url.replace('postgres://', 'postgresql://', 1)
-        return url
+    else:
+        user = os.environ.get('POSTGRES_USER', 'eleitoral')
+        password = os.environ.get('POSTGRES_PASSWORD', 'eleitoral')
+        host = os.environ.get('POSTGRES_HOST', 'localhost')
+        port = os.environ.get('POSTGRES_PORT', '5432')
+        db_name = os.environ.get('POSTGRES_DB', 'eleitoral2026')
+        url = f'postgresql://{user}:{password}@{host}:{port}/{db_name}'
 
-    user = os.environ.get('POSTGRES_USER', 'eleitoral')
-    password = os.environ.get('POSTGRES_PASSWORD', 'eleitoral')
-    host = os.environ.get('POSTGRES_HOST', 'localhost')
-    port = os.environ.get('POSTGRES_PORT', '5432')
-    db_name = os.environ.get('POSTGRES_DB', 'eleitoral2026')
-    return f'postgresql://{user}:{password}@{host}:{port}/{db_name}'
+    if url.startswith('postgresql://'):
+        url = url.replace('postgresql://', 'postgresql+psycopg://', 1)
+    return url
 
 
 class Config:
