@@ -47,6 +47,11 @@ class Config:
     """Configuração base compartilhada por todos os ambientes."""
     SECRET_KEY = os.environ.get('SECRET_KEY', 'eleitoral2026-secret-key-dev')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'connect_args': {'connect_timeout': 10},
+    }
     JSON_AS_ASCII = False          # suporte a caracteres UTF-8 no JSON
     JSON_SORT_KEYS = False
     SCHEDULER_API_ENABLED = True

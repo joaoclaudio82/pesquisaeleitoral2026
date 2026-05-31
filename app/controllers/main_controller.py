@@ -14,6 +14,12 @@ def _filtros_request():
     return categoria, uf
 
 
+@main_bp.get('/health')
+def health():
+    """Health check para Railway — sem auth e sem consulta pesada."""
+    return {'status': 'ok'}, 200
+
+
 @main_bp.get('/')
 def dashboard():
     """

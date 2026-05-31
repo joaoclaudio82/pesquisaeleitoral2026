@@ -45,6 +45,11 @@ def create_app(env: str = None) -> Flask:
         from .migrate import migrate_schema
         db.create_all()
         migrate_schema()
+        if env == 'production':
+            from .seed import seed_database
+            from .services import UsuarioService
+            seed_database()
+            UsuarioService.seed_admin_padrao()
 
     # ── Registrar Blueprints (Controllers) ────────────────────────────────
     _register_blueprints(app)
