@@ -59,6 +59,10 @@
                class="nav-item {% if request.endpoint == 'noticias.admin_coletar' %}active{% endif %}">
                 <i class="fas fa-cloud-download-alt"></i><span>Coletar Notícias</span>
             </a>
+            <a href="{{ url_for('candidatos.descobrir') }}"
+               class="nav-item {% if request.endpoint == 'candidatos.descobrir' %}active{% endif %}">
+                <i class="fas fa-globe-americas"></i><span>Descobrir Candidatos</span>
+            </a>
             {% endif %}
             <a href="{{ url_for('tendencias.index') }}"
                class="nav-item {% if request.blueprint == 'tendencias' %}active{% endif %}">

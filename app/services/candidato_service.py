@@ -118,6 +118,7 @@ class CandidatoService:
         nome_abrev: str | None = None,
         buscar_foto: bool = True,
         static_root: str | None = None,
+        gerar_noticias_exemplo: bool = True,
     ) -> Candidato:
         """
         Cria um novo candidato, gera slug único, persiste no banco
@@ -168,7 +169,8 @@ class CandidatoService:
         db.session.flush()
 
         HistoricoService.gerar_historico(candidato, dias=60)
-        CandidatoService._gerar_noticias_iniciais(candidato)
+        if gerar_noticias_exemplo:
+            CandidatoService._gerar_noticias_iniciais(candidato)
 
         if buscar_foto and static_root:
             CandidatoService.atualizar_foto(candidato, static_root, commit=False)

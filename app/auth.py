@@ -30,9 +30,11 @@ _ADMIN_ONLY_EXACT = frozenset({
     'candidatos.buscar_foto',
     'candidatos.remover_foto',
     'candidatos.desativar',
+    'candidatos.descobrir',
     'api.api_criar_candidato',
     'api.api_desativar_candidato',
     'api.api_coletar',
+    'api.api_descobrir_candidatos',
     'api.api_atualizar',
 })
 

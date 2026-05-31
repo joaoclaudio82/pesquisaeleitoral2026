@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Descobrir Candidatos{% endblock %}
+{% block breadcrumb %}
+<li><a href="{{ url_for('candidatos.listar') }}">Candidatos</a></li>
+<li class="active">Descobrir na Web</li>
+{% endblock %}
+
+{% block content %}
+<section class="page-section form-section wide">
+    <div class="page-header">
+        <h1><i class="fas fa-globe-americas"></i> Descobrir Candidatos na Web</h1>
+        <p>Busca notícias sobre eleições 2026, identifica nomes mais citados e <strong>cadastra automaticamente</strong> no sistema.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('candidatos.descobrir') }}" class="form-card">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="categoria">Cargo</label>
+                <select id="categoria" name="categoria" required>
+                    {% for val, rotulo in categorias %}
+                    <option value="{{ val }}"
+                        {% if form and form.get('categoria') == val %}selected
+                        {% elif not form and val == 'presidente' %}selected{% endif %}>
+                        {{ rotulo }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="uf">Estado (UF)</label>
+                <select id="uf" name="uf">
+                    <option value="">— Nacional —</option>
+                    {% for sigla, nome in estados %}
+                    <option value="{{ sigla }}"
+                        {% if form and form.get('uf') == sigla %}selected{% endif %}>
+                        {{ sigla }} — {{ nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <span class="form-hint">Obrigatório para governador e demais cargos estaduais.</span>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="max_resultados">Máximo a importar</label>
+                <input type="number" id="max_resultados" name="max_resultados" min="1" max="20"
+                       value="{{ form.get('max_resultados', 10) if form else 10 }}">
+            </div>
+            <div class="form-group">
+                <label for="min_mencoes">Mín. menções na mídia</label>
+                <input type="number" id="min_mencoes" name="min_mencoes" min="1" max="10"
+                       value="{{ form.get('min_mencoes', 2) if form else 2 }}">
+                <span class="form-hint">Filtra nomes pouco citados nas manchetes.</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-inline">
+                <input type="checkbox" name="coletar_noticias" value="on"
+                       {% if not form or form.get('coletar_noticias') %}checked{% endif %}>
+                Coletar notícias reais (Google News) para cada candidato importado
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label for="dias_coleta">Período de notícias (dias)</label>
+            <select id="dias_coleta" name="dias_coleta">
+                {% for val in [7, 14, 30, 60] %}
+                <option value="{{ val }}"
+                    {% if (form and form.get('dias_coleta', '14')|int == val) or (not form and val == 14) %}selected{% endif %}>
+                    Últimos {{ val }} dias
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-info-box">
+            <i class="fas fa-info-circle"></i>
+            <div>
+                <strong>Como funciona</strong>
+                <ul>
+                    <li>Consulta Google News sobre pré-candidatos e eleições 2026</li>
+                    <li>Cruza menções com lista de referência + Wikipedia (nome e partido)</li>
+                    <li>Ignora candidatos já cadastrados no sistema</li>
+                    <li>Busca foto automaticamente e opcionalmente importa notícias</li>
+                </ul>
+                <p style="margin-top:8px;font-size:12px;color:var(--text-muted)">
+                    Revise os cadastros em <strong>Candidatos</strong> após a importação — partidos podem aparecer como "A confirmar".
+                </p>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{{ url_for('candidatos.listar') }}" class="btn-secondary">
+                <i class="fas fa-arrow-left"></i> Voltar
+            </a>
+            <button type="submit" name="acao" value="preview" class="btn-secondary">
+                <i class="fas fa-search"></i> Pré-visualizar
+            </button>
+            <button type="submit" name="acao" value="importar" class="btn-primary">
+                <i class="fas fa-cloud-download-alt"></i> Buscar e Importar
+            </button>
+        </div>
+    </form>
+
+    {% if preview %}
+    <div class="table-card" style="margin-top:24px">
+        <div class="chart-header">
+            <h3><i class="fas fa-list"></i> Pré-visualização</h3>
+            <span class="badge">{{ preview.noticias_lidas }} manchetes analisadas</span>
+        </div>
+        {% if preview.novos %}
+        <p style="margin-bottom:12px;color:var(--text-sec)">
+            <strong>{{ preview.novos | length }}</strong> candidato(s) novo(s) seriam importados:
+        </p>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Partido</th>
+                        <th>Menções</th>
+                        <th>Confiança</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in preview.novos %}
+                    <tr>
+                        <td><strong>{{ s.nome }}</strong></td>
+                        <td>{{ s.partido }}</td>
+                        <td>{{ s.mencoes }}</td>
+                        <td>{{ s.confianca }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-state" style="padding:24px">Nenhum candidato novo encontrado com os filtros atuais.</p>
+        {% endif %}
+        {% if preview.ja_monitorados %}
+        <p style="margin-top:16px;font-size:13px;color:var(--text-muted)">
+            Já monitorados: {{ preview.ja_monitorados | map(attribute='nome') | join(', ') }}
+        </p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if resultado %}
+    <div class="table-card" style="margin-top:24px">
+        <div class="chart-header">
+            <h3><i class="fas fa-check-circle"></i> Resultado da importação</h3>
+        </div>
+        {% if resultado.importados %}
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Candidato</th>
+                        <th>Partido</th>
+                        <th>Menções</th>
+                        <th>Notícias</th>
+                        <th>Foto</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in resultado.importados %}
+                    <tr>
+                        <td><strong>{{ item.nome }}</strong></td>
+                        <td>{{ item.partido }}</td>
+                        <td>{{ item.mencoes_midia }}</td>
+                        <td>{{ item.noticias_importadas }}</td>
+                        <td>{% if item.foto %}<i class="fas fa-check" style="color:var(--green)"></i>{% else %}—{% endif %}</td>
+                        <td>
+                            <a href="{{ url_for('candidatos.detalhe', slug=item.slug) }}" class="btn-secondary btn-sm">
+                                Ver
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        {% if resultado.erros %}
+        <div class="flash flash-error" style="margin-top:12px">
+            {% for e in resultado.erros %}{{ e }}<br>{% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

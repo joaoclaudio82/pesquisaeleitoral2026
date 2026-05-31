@@ -4,7 +4,8 @@ Endpoints JSON para consumo por JavaScript (gráficos, atualização live).
 """
 from flask import Blueprint, jsonify, request, abort
 from ..services import (CandidatoService, NoticiaService,
-                         HistoricoService, DashboardService, ColetaService)
+                         HistoricoService, DashboardService, ColetaService,
+                         DescobertaService)
 
 api_bp = Blueprint('api', __name__)
 
@@ -197,6 +198,34 @@ def api_coletar():
         return _erro(str(e))
 
     return _ok(resultado)
+
+
+@api_bp.post('/candidatos/descobrir')
+def api_descobrir_candidatos():
+    """
+    POST /api/v1/candidatos/descobrir
+    Body JSON: { categoria?, uf?, min_mencoes?, max_resultados?,
+                 coletar_noticias?, dias_coleta? }
+    """
+    from flask import current_app
+    body = request.get_json(silent=True) or {}
+    categoria = (body.get('categoria') or 'presidente').strip()
+    uf = (body.get('uf') or '').strip().upper() or None
+
+    try:
+        resultado = DescobertaService.importar(
+            categoria=categoria,
+            uf=uf,
+            min_mencoes=int(body.get('min_mencoes', 2)),
+            max_resultados=int(body.get('max_resultados', 10)),
+            coletar_noticias=bool(body.get('coletar_noticias', True)),
+            dias_coleta=int(body.get('dias_coleta', 14)),
+            static_root=current_app.static_folder,
+        )
+    except ValueError as e:
+        return _erro(str(e))
+
+    return _ok(resultado, 201 if resultado['importados'] else 200)
 
 
 @api_bp.post('/atualizar')

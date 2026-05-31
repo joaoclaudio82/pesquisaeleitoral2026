@@ -5,7 +5,7 @@ CRUD de candidatos e página de detalhe.
 from flask import (Blueprint, render_template, request,
                    redirect, url_for, flash, abort, current_app)
 from ..constants import CATEGORIAS, ESTADOS, categoria_requer_uf
-from ..services import CandidatoService, NoticiaService, HistoricoService
+from ..services import CandidatoService, NoticiaService, HistoricoService, DescobertaService
 
 candidato_bp = Blueprint('candidatos', __name__)
 
@@ -91,6 +91,74 @@ def listar():
         termo=termo,
         filtro_categoria=categoria,
         filtro_uf=uf,
+    )
+
+
+@candidato_bp.route('/descobrir', methods=['GET', 'POST'])
+def descobrir():
+    """GET/POST — busca candidatos prováveis na web e importa automaticamente."""
+    if request.method == 'POST':
+        acao = request.form.get('acao', 'importar')
+        categoria = request.form.get('categoria', 'presidente').strip()
+        uf = request.form.get('uf', '').strip().upper() or None
+        min_mencoes = request.form.get('min_mencoes', 2, type=int)
+        max_resultados = request.form.get('max_resultados', 10, type=int)
+        coletar_noticias = request.form.get('coletar_noticias') == 'on'
+        dias_coleta = request.form.get('dias_coleta', 14, type=int)
+
+        try:
+            if acao == 'preview':
+                preview = DescobertaService.analisar(
+                    categoria=categoria,
+                    uf=uf,
+                    min_mencoes=min_mencoes,
+                    max_resultados=max_resultados,
+                )
+                return render_template(
+                    'candidatos/descobrir.html',
+                    categorias=CATEGORIAS,
+                    estados=ESTADOS,
+                    preview=preview,
+                    form=request.form,
+                )
+
+            resultado = DescobertaService.importar(
+                categoria=categoria,
+                uf=uf,
+                min_mencoes=min_mencoes,
+                max_resultados=max_resultados,
+                coletar_noticias=coletar_noticias,
+                dias_coleta=dias_coleta,
+                static_root=_static_root(),
+            )
+        except ValueError as e:
+            flash(str(e), 'error')
+            return redirect(url_for('candidatos.descobrir'))
+
+        n = len(resultado['importados'])
+        if n:
+            flash(
+                f'{n} candidato(s) importado(s) da web. '
+                f'{resultado["noticias_coletadas"]} notícia(s) coletada(s).',
+                'success',
+            )
+        else:
+            flash(
+                'Nenhum candidato novo encontrado. Tente outro cargo/UF ou reduza o mínimo de menções.',
+                'warning',
+            )
+        return render_template(
+            'candidatos/descobrir.html',
+            categorias=CATEGORIAS,
+            estados=ESTADOS,
+            resultado=resultado,
+            form=request.form,
+        )
+
+    return render_template(
+        'candidatos/descobrir.html',
+        categorias=CATEGORIAS,
+        estados=ESTADOS,
     )
 
 
