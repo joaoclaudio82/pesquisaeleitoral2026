@@ -2,12 +2,15 @@
 Bootstrap do banco — create_all, migrate e seed com retry (Railway).
 """
 import os
+import threading
 import time
 
 from sqlalchemy.exc import DBAPIError, OperationalError
 
 from config import _database_uri, rebind_database
 from .database import db
+
+_bootstrap_lock = threading.Lock()
 
 
 def _is_connection_error(exc: BaseException) -> bool:
@@ -60,34 +63,72 @@ def bootstrap_database(app, env: str) -> None:
     if app.config.get('_DB_READY'):
         return
 
-    _log_db_target(app)
-    last_error = None
-    tried_public = False
+    with _bootstrap_lock:
+        if app.config.get('_DB_READY'):
+            return
 
-    while True:
-        max_attempts = 8
-        for attempt in range(1, max_attempts + 1):
+        _log_db_target(app)
+        last_error = None
+        tried_public = False
+
+        while True:
+            max_attempts = 8
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    print(f'[bootstrap] tentativa {attempt}/{max_attempts}...', flush=True)
+                    _run_bootstrap_once(app, env)
+                    app.config['_DB_READY'] = True
+                    print('[bootstrap] concluido.', flush=True)
+                    return
+                except Exception as exc:
+                    if not _is_connection_error(exc):
+                        raise
+                    last_error = exc
+                    print(f'[bootstrap] Postgres indisponivel: {exc}', flush=True)
+                    db.session.remove()
+                    db.engine.dispose()
+                    if attempt < max_attempts:
+                        time.sleep(min(attempt * 2, 10))
+
+            if env == 'production' and not tried_public and _try_public_url_fallback(app):
+                tried_public = True
+                _log_db_target(app)
+                continue
+            break
+
+        if last_error:
+            raise last_error
+
+
+def start_bootstrap_background(app, env: str) -> None:
+    """Inicia bootstrap em thread separada — não bloqueia Gunicorn nem /health."""
+    if app.config.get('_DB_BOOTSTRAP_STARTED'):
+        return
+    app.config['_DB_BOOTSTRAP_STARTED'] = True
+
+    def _worker() -> None:
+        with app.app_context():
             try:
-                print(f'[bootstrap] tentativa {attempt}/{max_attempts}...', flush=True)
-                _run_bootstrap_once(app, env)
-                app.config['_DB_READY'] = True
-                print('[bootstrap] concluido.', flush=True)
-                return
+                bootstrap_database(app, env)
             except Exception as exc:
-                if not _is_connection_error(exc):
-                    raise
-                last_error = exc
-                print(f'[bootstrap] Postgres indisponivel: {exc}', flush=True)
-                db.session.remove()
-                db.engine.dispose()
-                if attempt < max_attempts:
-                    time.sleep(min(attempt * 2, 10))
+                print(f'[bootstrap] falhou em background: {exc}', flush=True)
 
-        if env == 'production' and not tried_public and _try_public_url_fallback(app):
-            tried_public = True
-            _log_db_target(app)
-            continue
-        break
+    threading.Thread(target=_worker, daemon=True, name='db-bootstrap').start()
 
-    if last_error:
-        raise last_error
+
+_SKIP_BOOTSTRAP_ENDPOINTS = frozenset({'main.health', 'main.favicon'})
+
+
+def register_lazy_bootstrap(app, env: str) -> None:
+    """Garante bootstrap antes de rotas que usam banco (exceto /health)."""
+
+    @app.before_request
+    def _ensure_db_ready():
+        if app.config.get('_DB_READY'):
+            return None
+        from flask import request
+        endpoint = request.endpoint or ''
+        if endpoint in _SKIP_BOOTSTRAP_ENDPOINTS or endpoint.startswith('static'):
+            return None
+        bootstrap_database(app, env)
+        return None

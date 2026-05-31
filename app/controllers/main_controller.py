@@ -16,8 +16,10 @@ def _filtros_request():
 
 @main_bp.get('/health')
 def health():
-    """Health check para Railway — sem auth e sem consulta pesada."""
-    return {'status': 'ok'}, 200
+    """Health check para Railway — sem auth e sem consulta ao banco."""
+    from flask import current_app
+    db_status = 'ready' if current_app.config.get('_DB_READY') else 'pending'
+    return {'status': 'ok', 'db': db_status}, 200
 
 
 @main_bp.get('/favicon.ico')
