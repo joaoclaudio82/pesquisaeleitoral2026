@@ -58,7 +58,7 @@
     <div class="chart-card full" style="margin-bottom:24px">
         <div class="chart-header">
             <h3>Evolução de Aprovação — {{ periodo_label }}</h3>
-            <span class="chart-subtitle">% de aprovação · passe o mouse no gráfico para ver notícias do dia</span>
+            <span class="chart-subtitle">% de sentimento positivo nas notícias · agrupado por {{ 'dia' if periodo <= 14 else 'semana' }}</span>
         </div>
         <div class="chart-wrap chart-wrap--lg">
             <canvas id="chartHistorico60"></canvas>
@@ -68,7 +68,7 @@
     <div class="chart-card full" style="margin-bottom:24px">
         <div class="chart-header">
             <h3>Evolução de Rejeição — {{ periodo_label }}</h3>
-            <span class="chart-subtitle">% de rejeição · baseado nas notícias coletadas no período</span>
+            <span class="chart-subtitle">% de sentimento negativo nas notícias · agrupado por {{ 'dia' if periodo <= 14 else 'semana' }}</span>
         </div>
         <div class="chart-wrap chart-wrap--lg">
             <canvas id="chartRejeicao60"></canvas>
@@ -79,7 +79,7 @@
     <div class="charts-row">
         <div class="chart-card medium">
             <div class="chart-header">
-                <h3>Volume de Menções — {{ periodo_label }}</h3>
+                <h3>Volume de Notícias — {{ periodo_label }}</h3>
             </div>
             <div class="chart-wrap chart-wrap--md">
                 <canvas id="chartMencoes60"></canvas>
@@ -165,7 +165,9 @@ const HIST    = {{ grafico_historico | tojson }};
 const RADAR   = {{ radar_datasets    | tojson }};
 const RLABELS = {{ radar_labels      | tojson }};
 const DIAS    = HIST.dias || {{ dias_tendencias }};
+const GRAN    = HIST.granularidade || (DIAS <= 14 ? 'dia' : 'semana');
 const maxTicksX = DIAS <= 14 ? DIAS : Math.min(14, Math.max(8, Math.ceil(DIAS / 14)));
+const periodoNoticias = GRAN === 'semana' ? 'na semana' : 'no dia';
 
 const CT = window.getChartTheme();
 Chart.defaults.color        = CT.text;
@@ -205,7 +207,7 @@ const lineChartOptions = (valorLabel) => ({
                     const base = `${c.dataset.label}: ${pct}% ${valorLabel}`;
                     if (n === undefined || n === null) return base;
                     const suf = n === 1 ? 'notícia' : 'notícias';
-                    return n > 0 ? `${base} · ${n} ${suf} no dia` : `${base} · sem notícias no dia`;
+                    return n > 0 ? `${base} · ${n} ${suf} ${periodoNoticias}` : `${base} · sem notícias ${periodoNoticias}`;
                 },
             },
         },
@@ -235,12 +237,12 @@ new Chart(document.getElementById('chartHistorico60'), {
             backgroundColor: 'transparent',
             borderWidth: 2,
             tension: 0.4,
-            pointRadius: 0,
+            pointRadius: c.noticias.map(n => n > 0 ? 3 : 0),
             pointHoverRadius: 4,
-            spanGaps: false,
+            spanGaps: true,
         })),
     },
-    options: lineChartOptions('aprovação'),
+    options: lineChartOptions('positivo'),
 });
 
 // Histórico completo — rejeição
@@ -257,12 +259,12 @@ new Chart(document.getElementById('chartRejeicao60'), {
             backgroundColor: 'transparent',
             borderWidth: 2,
             tension: 0.4,
-            pointRadius: 0,
+            pointRadius: c.noticias.map(n => n > 0 ? 3 : 0),
             pointHoverRadius: 4,
-            spanGaps: false,
+            spanGaps: true,
         })),
     },
-    options: lineChartOptions('rejeição'),
+    options: lineChartOptions('negativo'),
 });
 
 // Menções (linha com área — primeiros 4 candidatos)

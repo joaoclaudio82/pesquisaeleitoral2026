@@ -26,76 +26,83 @@ class HistoricoService:
                 .all())
 
     @staticmethod
+    def _propagar_serie(valores: list[float | None]) -> list[float | None]:
+        """Repete o último valor medido em buckets sem notícia (continuidade visual)."""
+        out: list[float | None] = []
+        ultimo: float | None = None
+        for v in valores:
+            if v is not None:
+                ultimo = v
+            out.append(ultimo)
+        return out
+
+    @staticmethod
     def obter_todos_para_grafico(
         dias: int = 60,
         categoria: str | None = None,
         uf: str | None = None,
     ) -> dict:
         """
-        Retorna dados formatados para Chart.js:
-        {
-            labels: ['01/01', '02/01', ...],
-            candidatos: {
-                slug: { nome, cor, aprovacoes: [...], rejeicoes: [...] }
-            }
-        }
+        Retorna dados formatados para Chart.js com base nas notícias coletadas.
+        ≤14 dias: buckets diários; >14 dias: buckets semanais.
+        Aprovação/rejeição = % de sentimento positivo/negativo no bucket.
         """
         from .candidato_service import CandidatoService
         from .noticia_service import NoticiaService
+        from ..models import Noticia
 
-        desde = date.today() - timedelta(days=dias)
         candidatos = CandidatoService.listar_todos(categoria=categoria, uf=uf)
-
-        # Gera eixo de datas
-        labels = []
-        d = desde
-        while d <= date.today():
-            labels.append(d.strftime('%d/%m'))
-            d += timedelta(days=1)
+        buckets = NoticiaService._gerar_buckets(dias)
+        labels = [b[0] for b in buckets]
+        granularidade = NoticiaService._granularidade(dias)
 
         dados = {}
         for cand in candidatos:
-            historicos = (Historico.query
-                          .filter(
-                              Historico.candidato_id == cand.id,
-                              Historico.data >= desde,
-                          )
-                          .order_by(Historico.data.asc())
-                          .all())
+            aprovacoes: list[float | None] = []
+            rejeicoes: list[float | None] = []
+            noticias: list[int] = []
+
+            for _, ini, fim in buckets:
+                noticias_bucket = (Noticia.query
+                                   .filter(
+                                       Noticia.candidato_id == cand.id,
+                                       Noticia.publicada_em >= ini,
+                                       Noticia.publicada_em <= fim,
+                                   )
+                                   .all())
+                total = len(noticias_bucket)
+                noticias.append(total)
+
+                if total == 0:
+                    aprovacoes.append(None)
+                    rejeicoes.append(None)
+                else:
+                    pos, neg, _ = NoticiaService._contar_sentimentos_noticias(
+                        noticias_bucket
+                    )
+                    aprovacoes.append(round(pos / total * 100, 1))
+                    rejeicoes.append(round(neg / total * 100, 1))
 
             stats = NoticiaService.stats_candidato(cand.id, dias=dias)
-            por_dia_not = NoticiaService.contagem_por_dia_candidato(
-                cand.id, dias=dias
-            )
-
-            # Indexar por data para lookup rápido
-            por_data = {h.data.strftime('%d/%m'): h for h in historicos}
-
-            aprovacoes = []
-            rejeicoes  = []
-            mencoes    = []
-            noticias   = []
-            d = desde
-            while d <= date.today():
-                lbl = d.strftime('%d/%m')
-                h = por_data.get(lbl)
-                aprovacoes.append(round(h.aprovacao, 1) if h else None)
-                rejeicoes.append(round(h.rejeicao,  1) if h else None)
-                mencoes.append(h.mencoes if h else 0)
-                noticias.append(por_dia_not.get(d, 0))
-                d += timedelta(days=1)
 
             dados[cand.slug] = {
                 'nome':           cand.nome_abrev,
                 'cor':            cand.cor,
-                'aprovacoes':     aprovacoes,
-                'rejeicoes':      rejeicoes,
-                'mencoes':        mencoes,
+                'aprovacoes':     HistoricoService._propagar_serie(aprovacoes),
+                'rejeicoes':      HistoricoService._propagar_serie(rejeicoes),
+                'aprovacoes_raw': aprovacoes,
+                'rejeicoes_raw':  rejeicoes,
+                'mencoes':        noticias,
                 'noticias':       noticias,
                 'total_noticias': stats['total'],
             }
 
-        return {'labels': labels, 'candidatos': dados, 'dias': dias}
+        return {
+            'labels': labels,
+            'candidatos': dados,
+            'dias': dias,
+            'granularidade': granularidade,
+        }
 
     # ── Mutações ──────────────────────────────────────────────────────────
 

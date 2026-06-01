@@ -62,14 +62,21 @@ def _use_public_database() -> bool:
 
 
 def resolve_production_database_uri() -> str:
-    """URI de producao: interna por padrao; publica se USE_PUBLIC_DATABASE=1."""
+    """
+    URI de producao. Padrao: DATABASE_URL (rede interna Railway).
+    USE_PUBLIC_DATABASE=1 usa DATABASE_PUBLIC_URL quando configurada;
+    se a URL publica nao existir, faz fallback para DATABASE_URL (nao derruba o boot).
+    """
     public = _database_uri(public=True)
-    if _use_public_database():
-        if not public:
-            raise RuntimeError(
-                'USE_PUBLIC_DATABASE=1 mas DATABASE_PUBLIC_URL nao configurada.'
-            )
+    if _use_public_database() and public:
         return public
+    if _use_public_database() and not public:
+        print(
+            '[config] USE_PUBLIC_DATABASE=1 mas DATABASE_PUBLIC_URL ausente; '
+            'usando DATABASE_URL. Remova USE_PUBLIC_DATABASE ou adicione a referencia '
+            'Postgres → DATABASE_PUBLIC_URL no servico Web.',
+            flush=True,
+        )
     return _database_uri(exigir_database_url=True)
 
 
