@@ -22,6 +22,7 @@ def main() -> None:
         'gunicorn',
         [
             'gunicorn',
+            '-c', 'gunicorn.conf.py',
             '--bind', f'0.0.0.0:{port}',
             '--workers', '2',
             '--timeout', '120',

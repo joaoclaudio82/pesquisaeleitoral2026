@@ -21,7 +21,7 @@ def login():
             'Banco de dados ainda inicializando. Aguarde alguns segundos e tente novamente.',
             'warning',
         )
-        return render_template('auth/login.html')
+        return render_template('auth/login.html', db_inicializando=True)
 
     if request.method == 'POST':
         if not current_app.config.get('_DB_READY'):
@@ -29,7 +29,7 @@ def login():
                 'Banco de dados ainda inicializando. Aguarde alguns segundos e tente novamente.',
                 'warning',
             )
-            return render_template('auth/login.html')
+            return render_template('auth/login.html', db_inicializando=True)
 
         email = request.form.get('email', '').strip()
         senha = request.form.get('senha', '')

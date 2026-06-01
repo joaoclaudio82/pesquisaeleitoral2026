@@ -52,13 +52,15 @@ def create_app(env: str = None) -> Flask:
     _register_blueprints(app)
 
     # ── Banco: dev/test no boot; produção em background (health check imediato) ──
-    from .bootstrap import bootstrap_database, register_db_gate, start_bootstrap_background
+    from .bootstrap import bootstrap_database, register_db_gate
     if env == 'testing':
         with app.app_context():
             db.create_all()
     elif env == 'production':
-        start_bootstrap_background(app, env)
         register_db_gate(app, env)
+        # Bootstrap em gunicorn.conf.py post_fork (cada worker). Dev: sync abaixo.
+        if os.environ.get('FLASK_RUN_FROM_CLI'):
+            bootstrap_database(app, env)
     else:
         bootstrap_database(app, env)
 
