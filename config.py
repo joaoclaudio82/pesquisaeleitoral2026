@@ -121,6 +121,8 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     """Ambiente de produção."""
     DEBUG = False
+    PREFERRED_URL_SCHEME = 'https'
+    SESSION_COOKIE_SECURE = True
     # URI definida em create_app() — exige DATABASE_URL só ao subir em produção
 
 

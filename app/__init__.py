@@ -34,6 +34,10 @@ def create_app(env: str = None) -> Flask:
         app.config['SQLALCHEMY_DATABASE_URI'] = uri
         if 'railway.app' in uri:
             app.config['_USING_PUBLIC_DB'] = True
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1,
+        )
 
     # Pasta instance (logs/uploads locais, se necessário)
     os.makedirs(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'instance'), exist_ok=True)

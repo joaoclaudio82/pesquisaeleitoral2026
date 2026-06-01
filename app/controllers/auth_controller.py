@@ -4,6 +4,7 @@ Controller: Autenticação (login / logout)
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_user, logout_user
 
+from ..auth import safe_redirect_target
 from ..services import UsuarioService
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -38,7 +39,7 @@ def login():
         login_user(usuario, remember=bool(request.form.get('lembrar')))
         flash(f'Bem-vindo(a), {usuario.nome}!', 'success')
 
-        destino = request.args.get('next') or url_for('main.dashboard')
+        destino = safe_redirect_target(request.args.get('next'))
         return redirect(destino)
 
     return render_template('auth/login.html')
