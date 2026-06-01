@@ -12,11 +12,18 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    from flask import current_app
+
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        if current_app.config.get('_DB_READY'):
+            return redirect(url_for('main.dashboard'))
+        flash(
+            'Banco de dados ainda inicializando. Aguarde alguns segundos e tente novamente.',
+            'warning',
+        )
+        return render_template('auth/login.html')
 
     if request.method == 'POST':
-        from flask import current_app
         if not current_app.config.get('_DB_READY'):
             flash(
                 'Banco de dados ainda inicializando. Aguarde alguns segundos e tente novamente.',

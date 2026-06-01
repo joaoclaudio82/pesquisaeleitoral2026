@@ -135,7 +135,7 @@ def register_db_gate(app, env: str) -> None:
         endpoint = request.endpoint or ''
         if endpoint in _SKIP_DB_GATE_ENDPOINTS or endpoint.startswith('static'):
             return None
-        if endpoint == 'auth.login' and request.method == 'GET':
+        if endpoint == 'auth.login' and request.method in ('GET', 'HEAD'):
             return None
         if app.config.get('_DB_BOOTSTRAP_ERROR'):
             msg = 'Banco indisponível. Verifique DATABASE_URL no Railway.'
