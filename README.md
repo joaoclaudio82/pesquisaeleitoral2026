@@ -128,6 +128,8 @@ O banco SQLite é criado automaticamente na pasta `instance/` e populado com dad
 | GET | `/api/v1/historico?dias=30` | Histórico de todos |
 | GET | `/api/v1/historico/<id>` | Histórico de um candidato |
 | GET | `/api/v1/dashboard?periodo=30` | Dados completos do dashboard |
+| GET | `/api/v1/inteligencia/sinais?dias=30` | Sinais acionáveis por candidato |
+| GET | `/api/v1/alertas?dias=30&limite=8` | Alertas automáticos priorizados |
 | POST | `/api/v1/atualizar` | Simula ciclo de coleta |
 
 ### Query params disponíveis
@@ -215,6 +217,43 @@ O banco SQLite é criado automaticamente na pasta `instance/` e populado com dad
 8. **Cache** — Flask-Caching para queries pesadas do dashboard
 9. **Export** — endpoint `/api/v1/export/csv` para download
 10. **WebSocket** — atualização ao vivo sem recarregar a página
+
+---
+
+## 🧠 Camada de Inteligência (atual)
+
+O produto agora inclui sinais acionáveis para consultoria eleitoral:
+
+- **Ruptura negativa**: crescimento abrupto de negatividade no período.
+- **Aceleração positiva**: ganho rápido de sentimento positivo.
+- **Pico de visibilidade**: aumento súbito de volume de cobertura.
+- **Score de prioridade**: combinação de volume, risco e momentum.
+
+### Indicadores de decisão
+
+- `delta_positivo_pp`: variação do percentual positivo vs janela anterior.
+- `delta_negativo_pp`: variação do percentual negativo vs janela anterior.
+- `delta_volume`: variação de volume de notícias entre janelas.
+- `confianca`: proxy de robustez analítica (baseado em volume).
+
+### Alertas automáticos
+
+Alertas são derivados dos sinais e exibidos no dashboard e módulos:
+
+- `critico`: severidade alta (rupturas relevantes).
+- `atencao`: mudanças importantes para monitoramento tático.
+
+---
+
+## 🧩 Módulos Profissionais
+
+Rotas dedicadas por perfil:
+
+- `/modulos/consultoria` — leitura executiva com recomendações.
+- `/modulos/campanha` — foco em risco reputacional diário.
+- `/modulos/partido` — visão multi-candidatos por tema/UF.
+
+As visões usam os mesmos dados-base, com contexto de decisão específico por público.
 
 ---
 

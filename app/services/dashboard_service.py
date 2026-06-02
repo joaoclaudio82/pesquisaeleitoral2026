@@ -5,6 +5,8 @@ Todas as métricas de sentimento/notícias vêm das notícias coletadas pelo app
 """
 from .candidato_service import CandidatoService
 from .noticia_service   import NoticiaService
+from .inteligencia_service import InteligenciaService
+from .alerta_service import AlertaService
 
 
 class DashboardService:
@@ -22,6 +24,13 @@ class DashboardService:
 
     PERIODOS_VALIDOS = {p[0] for p in PERIODOS}
     CONFIANCA_MINIMA = 30
+    TIPOS_SINAL_OPCOES = [
+        ('', 'Todos os sinais'),
+        ('ruptura_negativa', 'Ruptura negativa'),
+        ('aceleracao_positiva', 'Aceleração positiva'),
+        ('pico_visibilidade', 'Pico de visibilidade'),
+        ('tema_negativo', 'Tema em risco'),
+    ]
 
     @staticmethod
     def periodo_label(dias: int) -> str:
@@ -32,10 +41,17 @@ class DashboardService:
         return dias if dias in DashboardService.PERIODOS_VALIDOS else 30
 
     @staticmethod
+    def normalizar_comparacao(comparacao: int, periodo: int) -> int:
+        comparacao = comparacao if comparacao > 0 else periodo
+        return min(comparacao, periodo)
+
+    @staticmethod
     def obter_dados(
         periodo: int = 30,
         categoria: str | None = None,
         uf: str | None = None,
+        comparacao_dias: int | None = None,
+        tipo_sinal: str | None = None,
     ) -> dict:
         """
         Retorna KPIs e gráficos com base nas notícias coletadas no período.
@@ -46,11 +62,21 @@ class DashboardService:
             uf: Filtro por estado (UF).
         """
         periodo = DashboardService.normalizar_periodo(periodo)
+        comparacao = DashboardService.normalizar_comparacao(
+            comparacao_dias or periodo, periodo
+        )
+        tipo_sinal = (tipo_sinal or '').strip() or None
+        if tipo_sinal == '':
+            tipo_sinal = None
         periodo_label = DashboardService.periodo_label(periodo)
+        comparacao_label = DashboardService.periodo_label(comparacao)
 
         candidatos = CandidatoService.listar_todos(categoria=categoria, uf=uf)
         sentimentos = NoticiaService.contagem_por_sentimento(
             categoria=categoria, uf=uf, dias=periodo
+        )
+        sentimentos_previos = NoticiaService.contagem_por_sentimento(
+            categoria=categoria, uf=uf, dias=periodo * 2
         )
         temas_count = NoticiaService.contagem_por_tema(
             categoria=categoria, uf=uf, dias=periodo
@@ -78,6 +104,40 @@ class DashboardService:
             })
 
         ranking.sort(key=lambda r: (r['pct_positivo'], r['total']), reverse=True)
+
+        sinais = InteligenciaService.gerar_sinais(
+            candidatos,
+            dias=periodo,
+            comparacao_dias=comparacao,
+            tipo_sinal=tipo_sinal,
+        )
+        alertas = AlertaService.gerar_alertas(
+            candidatos,
+            dias=periodo,
+            comparacao_dias=comparacao,
+            tipo_sinal=tipo_sinal,
+            categoria=categoria,
+            uf=uf,
+        )
+        ranking_temas_risco = InteligenciaService.ranking_risco_temas(
+            categoria=categoria, uf=uf, dias=periodo
+        )
+        acoes_recomendadas = []
+        for s in sinais[:3]:
+            acoes_recomendadas.append({
+                'titulo': s['resumo'],
+                'acao': s['recomendacao'],
+                'severidade': s['severidade'],
+                'score': s['score'],
+            })
+
+        delta_pos = round(
+            sentimentos['pct_positivo'] - sentimentos_previos['pct_positivo'], 1
+        )
+        delta_neg = round(
+            sentimentos['pct_negativo'] - sentimentos_previos['pct_negativo'], 1
+        )
+        delta_total = sentimentos['total'] - sentimentos_previos['total']
 
         sentimento_por_candidato = {
             'labels':   [],
@@ -126,9 +186,17 @@ class DashboardService:
                 'total_noticias': sentimentos['total'],
                 'noticias_hoje':  NoticiaService.noticias_hoje(categoria=categoria, uf=uf),
             },
+            'insights': {
+                'delta_positivo_pp': delta_pos,
+                'delta_negativo_pp': delta_neg,
+                'delta_volume': delta_total,
+                'sinais': sinais,
+                'acoes_recomendadas': acoes_recomendadas,
+            },
             'candidatos':        candidatos,
             'ranking':           ranking,
             'noticias_recentes': noticias_recentes,
+            'alertas':           alertas,
             'confianca_baixa': 0 < total < DashboardService.CONFIANCA_MINIMA,
             'confianca_minima': DashboardService.CONFIANCA_MINIMA,
             'grafico_mencoes': {
@@ -150,4 +218,9 @@ class DashboardService:
             'periodos_opcoes':  DashboardService.PERIODOS,
             'filtro_categoria': categoria,
             'filtro_uf':        uf,
+            'comparacao_dias':  comparacao,
+            'comparacao_label': comparacao_label,
+            'tipo_sinal':       tipo_sinal or '',
+            'tipos_sinal_opcoes': DashboardService.TIPOS_SINAL_OPCOES,
+            'ranking_temas_risco': ranking_temas_risco,
         }

@@ -83,6 +83,7 @@ def _register_blueprints(app: Flask) -> None:
     from .controllers.auth_controller       import auth_bp
     from .controllers.usuario_controller   import usuario_bp
     from .controllers.schema_controller    import schema_bp
+    from .controllers.modulo_controller    import modulo_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(candidato_bp,  url_prefix='/candidatos')
@@ -92,6 +93,7 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(auth_bp)
     app.register_blueprint(usuario_bp)
     app.register_blueprint(schema_bp)
+    app.register_blueprint(modulo_bp)
 
 
 def _register_jinja_filters(app: Flask) -> None:
@@ -181,15 +183,29 @@ def _register_context_processors(app: Flask) -> None:
 
     @app.context_processor
     def inject_globals():
+        from flask import current_app
         from flask_login import current_user
+        from .auth import modulo_home_for_user
+
         pode_escrever = (
             current_user.is_authenticated and current_user.pode_escrever()
         )
+        alertas_count = 0
+        modulo_home_url = None
+        if current_user.is_authenticated:
+            modulo_home_url = modulo_home_for_user(current_user)
+            if current_app.config.get('_DB_READY'):
+                from .services import AlertaService, CandidatoService
+                candidatos = CandidatoService.listar_todos()
+                alertas_count = AlertaService.contar_alertas(candidatos, dias=30)
+
         return {
             'ano_eleicao': 2026,
             'app_nome': 'Eleitoral2026',
             'agora': datetime.now(),
             'pode_escrever': pode_escrever,
+            'alertas_count': alertas_count,
+            'modulo_home_url': modulo_home_url,
             'categorias': CATEGORIAS,
             'categorias_labels': categorias_dict(),
             'estados': ESTADOS,

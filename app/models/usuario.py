@@ -9,7 +9,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from ..database import db
 
-PAPEIS = ('admin', 'visualizador')
+PAPEIS = ('admin', 'visualizador', 'consultor', 'campanha', 'partido')
 
 
 class Usuario(UserMixin, db.Model):
@@ -45,7 +45,14 @@ class Usuario(UserMixin, db.Model):
 
     @property
     def papel_label(self) -> str:
-        return 'Administrador' if self.is_admin else 'Visualizador'
+        labels = {
+            'admin': 'Administrador',
+            'visualizador': 'Visualizador',
+            'consultor': 'Consultor',
+            'campanha': 'Equipe de Campanha',
+            'partido': 'Equipe de Partido',
+        }
+        return labels.get(self.papel, self.papel.capitalize())
 
     def to_dict(self) -> dict:
         return {

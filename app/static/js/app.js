@@ -9,7 +9,17 @@ document.addEventListener('DOMContentLoaded', () => {
     initRefreshBtn();
     initFlashAutoClose();
     initTemaCheckboxes();
+    initFilterForms();
 });
+
+function initFilterForms() {
+    document.querySelectorAll('.filters-bar').forEach((form) => {
+        form.addEventListener('submit', () => form.classList.add('is-loading'));
+        form.querySelectorAll('select').forEach((sel) => {
+            sel.addEventListener('change', () => form.classList.add('is-loading'));
+        });
+    });
+}
 
 /* ── Tema claro / escuro ─────────────────── */
 function initTheme() {

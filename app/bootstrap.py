@@ -89,8 +89,11 @@ def bootstrap_database(app, env: str) -> None:
                     raise
                 last_error = exc
                 print(f'[bootstrap] Postgres indisponivel: {exc}', flush=True)
-                db.session.remove()
-                db.engine.dispose()
+                try:
+                    db.session.remove()
+                    db.engine.dispose()
+                except RuntimeError:
+                    pass
             if attempt < max_attempts:
                 time.sleep(min(attempt * 2, 10))
 

@@ -104,6 +104,65 @@ class HistoricoService:
             'granularidade': granularidade,
         }
 
+    @staticmethod
+    def comparativo_candidatos(
+        candidato_a_slug: str | None,
+        candidato_b_slug: str | None,
+        dias: int,
+        categoria: str | None = None,
+        uf: str | None = None,
+    ) -> dict:
+        """Retorna comparativo simplificado entre dois candidatos."""
+        from .candidato_service import CandidatoService
+        from .noticia_service import NoticiaService
+
+        candidatos = CandidatoService.listar_todos(categoria=categoria, uf=uf)
+        by_slug = {c.slug: c for c in candidatos}
+        cand_a = by_slug.get(candidato_a_slug) if candidato_a_slug else None
+        cand_b = by_slug.get(candidato_b_slug) if candidato_b_slug else None
+
+        if not cand_a and candidatos:
+            cand_a = candidatos[0]
+        if not cand_b and len(candidatos) > 1:
+            cand_b = candidatos[1]
+
+        def _stats(c):
+            if not c:
+                return None
+            s = NoticiaService.stats_candidato(c.id, dias=dias)
+            return {
+                'slug': c.slug,
+                'nome': c.nome_abrev,
+                'cor': c.cor,
+                'positivo': s['pct_positivo'],
+                'negativo': s['pct_negativo'],
+                'volume': s['total'],
+            }
+
+        return {'a': _stats(cand_a), 'b': _stats(cand_b)}
+
+    @staticmethod
+    def projecoes_candidato(candidato_id: int, dias: int = 30) -> dict:
+        """Projecao curta de sentimento positivo baseada na tendencia recente."""
+        from .noticia_service import NoticiaService
+        # fallback robusto: usa stats periodicas
+        atual = NoticiaService.stats_candidato(candidato_id, dias=max(7, dias // 2))
+        anterior = NoticiaService.stats_candidato(candidato_id, dias=max(14, dias))
+        inclinacao = round(atual['pct_positivo'] - anterior['pct_positivo'], 1)
+        confianca = min(100, atual['total'] * 2)
+
+        def _proj(base: float, fator: float) -> float:
+            return round(max(0.0, min(100.0, base + fator)), 1)
+
+        return {
+            'atual': atual['pct_positivo'],
+            'inclinacao_pp': inclinacao,
+            'confianca': confianca,
+            'p7': _proj(atual['pct_positivo'], inclinacao * 0.6),
+            'p14': _proj(atual['pct_positivo'], inclinacao * 1.1),
+            'p30': _proj(atual['pct_positivo'], inclinacao * 1.8),
+        }
+
     # ── Mutações ──────────────────────────────────────────────────────────
 
     @staticmethod

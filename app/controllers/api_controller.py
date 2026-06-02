@@ -5,7 +5,7 @@ Endpoints JSON para consumo por JavaScript (gráficos, atualização live).
 from flask import Blueprint, jsonify, request, abort
 from ..services import (CandidatoService, NoticiaService,
                          HistoricoService, DashboardService, ColetaService,
-                         DescobertaService)
+                         DescobertaService, InteligenciaService, AlertaService)
 
 api_bp = Blueprint('api', __name__)
 
@@ -164,13 +164,45 @@ def api_dashboard():
     periodo = DashboardService.normalizar_periodo(periodo)
     categoria = request.args.get('categoria') or None
     uf = (request.args.get('uf') or '').upper() or None
+    comparacao = request.args.get('comparacao', periodo, type=int)
+    tipo_sinal = request.args.get('tipo_sinal') or None
     dados = DashboardService.obter_dados(
-        periodo=periodo, categoria=categoria, uf=uf
+        periodo=periodo, categoria=categoria, uf=uf,
+        comparacao_dias=comparacao, tipo_sinal=tipo_sinal,
     )
     # Serializar candidatos
     dados['candidatos'] = [c.to_dict() for c in dados['candidatos']]
     dados['noticias_recentes'] = [n.to_dict() for n in dados['noticias_recentes']]
     return _ok(dados)
+
+
+@api_bp.get('/inteligencia/sinais')
+def api_inteligencia_sinais():
+    dias = request.args.get('dias', 30, type=int)
+    comparacao = request.args.get('comparacao', dias, type=int)
+    tipo_sinal = request.args.get('tipo_sinal') or None
+    categoria = request.args.get('categoria') or None
+    uf = (request.args.get('uf') or '').upper() or None
+    candidatos = CandidatoService.listar_todos(categoria=categoria, uf=uf)
+    return _ok(InteligenciaService.gerar_sinais(
+        candidatos, dias=dias, comparacao_dias=comparacao, tipo_sinal=tipo_sinal,
+    ))
+
+
+@api_bp.get('/alertas')
+def api_alertas():
+    dias = request.args.get('dias', 30, type=int)
+    comparacao = request.args.get('comparacao', dias, type=int)
+    limite = request.args.get('limite', 8, type=int)
+    tipo_sinal = request.args.get('tipo_sinal') or None
+    categoria = request.args.get('categoria') or None
+    uf = (request.args.get('uf') or '').upper() or None
+    candidatos = CandidatoService.listar_todos(categoria=categoria, uf=uf)
+    return _ok(AlertaService.gerar_alertas(
+        candidatos, dias=dias, limite=limite,
+        comparacao_dias=comparacao, tipo_sinal=tipo_sinal,
+        categoria=categoria, uf=uf,
+    ))
 
 
 # ── Atualização simulada ──────────────────────────────────────────────────

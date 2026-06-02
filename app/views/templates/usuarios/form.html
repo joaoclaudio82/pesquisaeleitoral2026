@@ -27,14 +27,17 @@
         <div class="form-group">
             <label for="papel">Papel *</label>
             <select id="papel" name="papel" required>
-                <option value="visualizador"
-                    {% if usuario and usuario.papel == 'visualizador' %}selected{% endif %}>
-                    Visualizador (somente leitura)
+                {% for papel_val in papeis %}
+                <option value="{{ papel_val }}"
+                    {% if usuario and usuario.papel == papel_val %}selected{% endif %}
+                    {% if not usuario and papel_val == 'visualizador' %}selected{% endif %}>
+                    {% if papel_val == 'admin' %}Administrador (acesso completo)
+                    {% elif papel_val == 'consultor' %}Consultor (módulo consultoria)
+                    {% elif papel_val == 'campanha' %}Campanha (monitoramento diário)
+                    {% elif papel_val == 'partido' %}Partido (visão multi-candidatos)
+                    {% else %}Visualizador (somente leitura){% endif %}
                 </option>
-                <option value="admin"
-                    {% if usuario and usuario.papel == 'admin' %}selected{% endif %}>
-                    Administrador (acesso completo)
-                </option>
+                {% endfor %}
             </select>
         </div>
         {% if usuario %}

@@ -68,6 +68,13 @@
                class="nav-item {% if request.blueprint == 'tendencias' %}active{% endif %}">
                 <i class="fas fa-chart-area"></i><span>Tendências</span>
             </a>
+            <a href="{{ modulo_home_url or url_for('modulos.consultoria') }}"
+               class="nav-item {% if request.blueprint == 'modulos' %}active{% endif %}">
+                <i class="fas fa-brain"></i><span>Inteligência</span>
+                {% if alertas_count %}
+                <span class="nav-badge" title="Alertas ativos">{{ alertas_count }}</span>
+                {% endif %}
+            </a>
             {% if current_user.is_admin %}
             <a href="{{ url_for('usuarios.listar') }}"
                class="nav-item {% if request.blueprint == 'usuarios' %}active{% endif %}">
@@ -128,6 +135,13 @@
                 <span class="viewer-badge" title="Perfil somente leitura">
                     <i class="fas fa-eye"></i> <span class="label-text">Somente leitura</span>
                 </span>
+                {% endif %}
+                {% if alertas_count %}
+                <a href="{{ modulo_home_url or url_for('modulos.consultoria') }}"
+                   class="alert-badge" title="Alertas de inteligência">
+                    <i class="fas fa-bell"></i>
+                    <span>{{ alertas_count }}</span>
+                </a>
                 {% endif %}
                 <span class="live-badge">
                     <span class="pulse"></span><span class="live-text">AO VIVO</span>

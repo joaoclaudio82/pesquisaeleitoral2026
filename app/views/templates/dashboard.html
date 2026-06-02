@@ -5,8 +5,8 @@
 {% block content %}
 <section class="page-section">
     <div class="page-header">
-        <h1>Dashboard <span class="badge">Eleições {{ ano_eleicao }}</span></h1>
-        <p>Análise de cobertura na mídia com base nas <strong>notícias coletadas</strong> pelo app.</p>
+        <h1>Central de Inteligência Eleitoral <span class="badge">Eleições {{ ano_eleicao }}</span></h1>
+        <p>Ambiente de decisão para consultores: o que mudou, onde esta o risco e qual acao priorizar agora.</p>
 
         <form method="get" class="filters-bar dashboard-filters dashboard-filters-unified">
             {% set auto_submit = true %}
@@ -22,6 +22,30 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="filter-group">
+                <label for="filtro-comparacao">Janela de comparação</label>
+                <select id="filtro-comparacao" name="comparacao"
+                        {% if auto_submit %}onchange="this.form.submit()"{% endif %}>
+                    {% for dias, rotulo in periodos_opcoes %}
+                    {% if dias <= periodo %}
+                    <option value="{{ dias }}" {% if comparacao_dias == dias %}selected{% endif %}>
+                        vs últimos {{ rotulo }}
+                    </option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filtro-tipo-sinal">Tipo de sinal</label>
+                <select id="filtro-tipo-sinal" name="tipo_sinal"
+                        {% if auto_submit %}onchange="this.form.submit()"{% endif %}>
+                    {% for valor, rotulo in tipos_sinal_opcoes %}
+                    <option value="{{ valor }}" {% if tipo_sinal == valor %}selected{% endif %}>
+                        {{ rotulo }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
         </form>
 
         <div class="dashboard-methodology">
@@ -33,9 +57,25 @@
             </div>
         </div>
 
+        <div class="value-strip">
+            <div class="value-item">
+                <strong>Proposta de valor</strong>
+                <span>Transformar cobertura jornalística em recomendações acionáveis.</span>
+            </div>
+            <div class="value-item">
+                <strong>Tomada de decisão</strong>
+                <span>Priorize candidaturas e temas por severidade e impacto.</span>
+            </div>
+            <div class="value-item">
+                <strong>Confiança analítica</strong>
+                <span>Leitura guiada por volume e consistência das evidências.</span>
+            </div>
+        </div>
+
         <p class="dashboard-periodo-info">
             <i class="fas fa-info-circle"></i>
             Período: <strong>{{ periodo_label }}</strong>
+            · Comparação: <strong>{{ comparacao_label }}</strong>
             · {{ kpi.total_noticias }} notícia(s) no intervalo
             {% if confianca_baixa %}
             <span class="dashboard-confidence-badge">
@@ -44,6 +84,41 @@
             </span>
             {% endif %}
         </p>
+    </div>
+
+    <div class="dashboard-section">
+        <h2 class="dashboard-section-title">
+            <i class="fas fa-bolt"></i> Insights da semana
+            <span class="dashboard-section-hint">Resumo executivo para decisão rápida</span>
+        </h2>
+        <div class="insight-grid">
+            {% for acao in insights.acoes_recomendadas %}
+            <article class="insight-card insight-{{ acao.severidade }}">
+                <h3>{{ acao.titulo }}</h3>
+                <p>{{ acao.acao }}</p>
+                <small>Score de prioridade: {{ acao.score }}</small>
+            </article>
+            {% else %}
+            <article class="insight-card">
+                <h3>Sem sinais fortes no período</h3>
+                <p>Sem ruptura relevante com volume suficiente para recomendações táticas.</p>
+            </article>
+            {% endfor %}
+        </div>
+        <div class="decision-kpis">
+            <div class="decision-kpi">
+                <span>Delta positivo</span>
+                <strong>{{ insights.delta_positivo_pp | pct }}</strong>
+            </div>
+            <div class="decision-kpi">
+                <span>Delta negativo</span>
+                <strong>{{ insights.delta_negativo_pp | pct }}</strong>
+            </div>
+            <div class="decision-kpi">
+                <span>Volume vs janela anterior</span>
+                <strong>{{ insights.delta_volume | br_number }}</strong>
+            </div>
+        </div>
     </div>
 
     <!-- ══ Visão geral ══ -->
@@ -85,6 +160,49 @@
                     <span class="kpi-change neutral">{{ kpi.noticias_hoje }} coletada(s) hoje (fora do filtro)</span>
                 </div>
             </div>
+        </div>
+    </div>
+
+    {% if ranking_temas_risco %}
+    <div class="dashboard-section">
+        <h2 class="dashboard-section-title">
+            <i class="fas fa-fire"></i> Temas em risco
+            <span class="dashboard-section-hint">Maior % de notícias negativas no período</span>
+        </h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Tema</th><th>Notícias</th><th>% Negativo</th></tr>
+                </thead>
+                <tbody>
+                    {% for t in ranking_temas_risco %}
+                    <tr>
+                        <td>{{ t.label }}</td>
+                        <td>{{ t.total | br_number }}</td>
+                        <td style="color:#ef4444;font-weight:700">{{ t.pct_negativo }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="dashboard-section">
+        <h2 class="dashboard-section-title">
+            <i class="fas fa-bell"></i> Alertas automáticos
+            <span class="dashboard-section-hint">Riscos e oportunidades detectados automaticamente</span>
+        </h2>
+        <div class="insight-grid">
+            {% for alerta in alertas %}
+            <article class="insight-card insight-{{ alerta.nivel }}">
+                <h3>{{ alerta.titulo }}</h3>
+                <p>{{ alerta.resumo }}</p>
+                <small>{{ alerta.recomendacao }}</small>
+            </article>
+            {% else %}
+            <p class="empty-ranking">Sem alertas prioritários no período.</p>
+            {% endfor %}
         </div>
     </div>
 

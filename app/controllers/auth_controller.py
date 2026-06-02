@@ -4,7 +4,7 @@ Controller: Autenticação (login / logout)
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_user, logout_user
 
-from ..auth import safe_redirect_target
+from ..auth import home_after_login, safe_redirect_target
 from ..services import UsuarioService
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -16,7 +16,7 @@ def login():
 
     if current_user.is_authenticated:
         if current_app.config.get('_DB_READY'):
-            return redirect(url_for('main.dashboard'))
+            return redirect(home_after_login(current_user))
         flash(
             'Banco de dados ainda inicializando. Aguarde alguns segundos e tente novamente.',
             'warning',
@@ -47,6 +47,8 @@ def login():
         flash(f'Bem-vindo(a), {usuario.nome}!', 'success')
 
         destino = safe_redirect_target(request.args.get('next'))
+        if destino in ('/', url_for('main.dashboard')):
+            destino = home_after_login(usuario)
         return redirect(destino)
 
     return render_template('auth/login.html')

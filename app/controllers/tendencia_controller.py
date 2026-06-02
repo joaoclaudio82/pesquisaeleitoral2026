@@ -8,6 +8,7 @@ from ..services import (
     NoticiaService,
     HistoricoService,
     TendenciaService,
+    AlertaService,
 )
 
 tendencia_bp = Blueprint('tendencias', __name__)
@@ -41,6 +42,11 @@ def index():
     )
     grafico_hist = HistoricoService.obter_todos_para_grafico(
         dias=dias, categoria=categoria, uf=uf
+    )
+    candidato_a = request.args.get('candidato_a') or None
+    candidato_b = request.args.get('candidato_b') or None
+    comparativo = HistoricoService.comparativo_candidatos(
+        candidato_a, candidato_b, dias, categoria=categoria, uf=uf
     )
 
     stats_por_id = {
@@ -82,6 +88,14 @@ def index():
             ],
         })
 
+    projecoes = {}
+    for c in candidatos[:4]:
+        projecoes[c.slug] = HistoricoService.projecoes_candidato(c.id, dias=dias)
+    alertas = AlertaService.gerar_alertas(
+        candidatos, dias=dias, limite=6,
+        categoria=categoria, uf=uf,
+    )
+
     return render_template(
         'tendencias/index.html',
         candidatos        = candidatos,
@@ -101,4 +115,7 @@ def index():
         total_noticias    = sentimentos['total'],
         confianca_baixa   = 0 < sentimentos['total'] < CONFIANCA_MINIMA,
         confianca_minima  = CONFIANCA_MINIMA,
+        comparativo       = comparativo,
+        projecoes         = projecoes,
+        alertas           = alertas,
     )

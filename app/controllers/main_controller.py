@@ -42,10 +42,17 @@ def dashboard():
     periodo = int(request.args.get('periodo', 30))
     periodo = DashboardService.normalizar_periodo(periodo)
     categoria, uf = _filtros_request()
+    try:
+        comparacao = int(request.args.get('comparacao', periodo))
+    except (TypeError, ValueError):
+        comparacao = periodo
+    tipo_sinal = request.args.get('tipo_sinal', '').strip() or None
 
     dados = DashboardService.obter_dados(
         periodo=periodo,
         categoria=categoria,
         uf=uf,
+        comparacao_dias=comparacao,
+        tipo_sinal=tipo_sinal,
     )
     return render_template('dashboard.html', **dados)

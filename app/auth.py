@@ -25,6 +25,14 @@ _ADMIN_ONLY_PREFIXES = (
     'schema.',
 )
 
+_PAPEL_MODULO_ENDPOINT = {
+    'consultor': 'modulos.consultoria',
+    'campanha': 'modulos.campanha',
+    'partido': 'modulos.partido',
+}
+
+_MODULO_ENDPOINTS = frozenset(_PAPEL_MODULO_ENDPOINT.values())
+
 _ADMIN_ONLY_EXACT = frozenset({
     'candidatos.criar',
     'candidatos.editar',
@@ -60,6 +68,18 @@ def safe_redirect_target(raw: str | None) -> str:
     if parsed.query:
         path = f'{path}?{parsed.query}'
     return path
+
+
+def home_after_login(usuario) -> str:
+    """Destino padrão após autenticação conforme perfil analítico."""
+    endpoint = _PAPEL_MODULO_ENDPOINT.get(usuario.papel)
+    if endpoint:
+        return url_for(endpoint)
+    return url_for('main.dashboard')
+
+
+def modulo_home_for_user(usuario) -> str:
+    return home_after_login(usuario)
 
 
 def _endpoint_requer_admin(endpoint: str) -> bool:
@@ -103,6 +123,21 @@ def init_auth(app) -> None:
                 'mensagem': 'Perfil somente leitura.',
             }), 403
         return redirect(url_for('main.dashboard'))
+
+    @app.before_request
+    def restringir_modulo_por_perfil():
+        endpoint = request.endpoint or ''
+        if endpoint not in _MODULO_ENDPOINTS:
+            return None
+        if not current_user.is_authenticated:
+            return None
+        if current_user.is_admin or current_user.papel == 'visualizador':
+            return None
+        permitido = _PAPEL_MODULO_ENDPOINT.get(current_user.papel)
+        if permitido and endpoint != permitido:
+            flash('Seu perfil tem acesso ao módulo dedicado da sua equipe.', 'warning')
+            return redirect(url_for(permitido))
+        return None
 
 
 def admin_required(f):

@@ -12,6 +12,9 @@ from .schema_service     import SchemaService
 from .tendencia_service  import TendenciaService
 from .foto_service       import FotoService
 from .descoberta_service import DescobertaService
+from .inteligencia_service import InteligenciaService
+from .alerta_service import AlertaService
+from .modulo_service import ModuloService
 
 __all__ = [
     'CandidatoService',
@@ -24,4 +27,7 @@ __all__ = [
     'TendenciaService',
     'FotoService',
     'DescobertaService',
+    'InteligenciaService',
+    'AlertaService',
+    'ModuloService',
 ]

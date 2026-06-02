@@ -54,6 +54,66 @@
     </div>
     {% endif %}
 
+    {% if comparativo.a and comparativo.b %}
+    <div class="table-card" style="margin-bottom:24px;">
+        <div class="chart-header">
+            <h3>Comparativo Direto</h3>
+            <span class="chart-subtitle">{{ comparativo.a.nome }} x {{ comparativo.b.nome }} no periodo</span>
+        </div>
+        <div class="compare-grid">
+            <div class="compare-item">
+                <h4 style="color:{{ comparativo.a.cor }}">{{ comparativo.a.nome }}</h4>
+                <p>Positivo: <strong>{{ comparativo.a.positivo }}%</strong></p>
+                <p>Negativo: <strong>{{ comparativo.a.negativo }}%</strong></p>
+                <p>Volume: <strong>{{ comparativo.a.volume | br_number }}</strong></p>
+            </div>
+            <div class="compare-item">
+                <h4 style="color:{{ comparativo.b.cor }}">{{ comparativo.b.nome }}</h4>
+                <p>Positivo: <strong>{{ comparativo.b.positivo }}%</strong></p>
+                <p>Negativo: <strong>{{ comparativo.b.negativo }}%</strong></p>
+                <p>Volume: <strong>{{ comparativo.b.volume | br_number }}</strong></p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="table-card" style="margin-bottom:24px;">
+        <div class="chart-header">
+            <h3>Projeções de Curto Prazo</h3>
+            <span class="chart-subtitle">Horizontes de 7/14/30 dias com indicador de confiança</span>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Candidato</th><th>Atual</th><th>+7d</th><th>+14d</th><th>+30d</th><th>Confiança</th></tr>
+                </thead>
+                <tbody>
+                    {% for c in candidatos[:4] %}
+                    {% set p = projecoes.get(c.slug) %}
+                    <tr>
+                        <td>{{ c.nome_abrev }}</td>
+                        <td>{{ p.atual if p else 0 }}%</td>
+                        <td>{{ p.p7 if p else 0 }}%</td>
+                        <td>{{ p.p14 if p else 0 }}%</td>
+                        <td>{{ p.p30 if p else 0 }}%</td>
+                        <td>{{ p.confianca if p else 0 }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="insight-grid" style="margin-bottom:24px;">
+        {% for alerta in alertas %}
+        <article class="insight-card insight-{{ alerta.nivel }}">
+            <h3>{{ alerta.titulo }}</h3>
+            <p>{{ alerta.resumo }}</p>
+            <small>{{ alerta.recomendacao }}</small>
+        </article>
+        {% endfor %}
+    </div>
+
     <!-- Histórico — aprovação e rejeição -->
     <div class="chart-card full" style="margin-bottom:24px">
         <div class="chart-header">
